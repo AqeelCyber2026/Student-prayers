@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <!-- تعريف الترميز وإعدادات العرض المناسبة للجوال. -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- عنوان الصفحة واستدعاء المكتبات المستخدمة في الواجهة والرسوم والرمز الرقمي. -->
+    <title>الملف الشامل للطالب</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- تنسيق الصفحة والبطاقات والجداول ودعم الشاشات الصغيرة. -->
+    <style>
+        :root { --primary: #243b53; --accent: #168aad; --success: #198754; --danger: #dc3545; --warning: #f0ad4e; --bg: #f4f7fb; }
+        body { background: var(--bg); color: #253342; font-family: "Segoe UI", Tahoma, sans-serif; }
+        .hero { background: linear-gradient(135deg, #243b53, #168aad); color: #fff; border-radius: 0 0 28px 28px; padding: 24px 18px 32px; }
+        .card { border: 0; border-radius: 18px; box-shadow: 0 8px 24px rgba(35, 55, 80, .08); }
+        .student-identity { margin-top: -28px; position: relative; }
+        .avatar { width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; background: #e8f4f8; color: var(--accent); font-size: 36px; border: 5px solid #fff; }
+        .stat-card { min-height: 112px; }
+        .stat-number { font-size: 1.8rem; font-weight: 800; }
+        .chart-box { position: relative; height: 270px; }
+        .timeline-badge { min-width: 82px; text-align: center; }
+        .rating-box { border-right: 5px solid var(--accent); background: #f8fbfd; }
+        .table thead th { white-space: nowrap; background: #eef5f8; }
+        .form-control, .form-select, .btn { border-radius: 12px; }
+        .student-results { position: absolute; z-index: 20; width: calc(100% - 24px); max-height: 240px; overflow-y: auto; }
+        .student-results button { text-align: right; }
+        .empty-state { min-height: 180px; display: grid; place-items: center; color: #718096; }
+        @media (max-width: 576px) { .hero h2 { font-size: 1.35rem; } .chart-box { height: 230px; } .student-identity { margin-top: -20px; } }
+    </style>
+</head>
+<body>
+    <!-- رأس الصفحة وروابط التنقل بين أجزاء النظام. -->
+    <header class="hero">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+                <div>
+                    <h2 class="fw-bold mb-1">👤 الملف الشامل للطالب</h2>
+                    <p class="mb-0 opacity-75 small">ملخص الصلوات والخواطر والمحاضرات في صفحة واحدة</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap justify-content-end">
+                    <a href="index.html" class="btn btn-light btn-sm">🏠 الرئيسية</a>
+                    <a href="advanced_report_dashboard.html" class="btn btn-outline-light btn-sm">التقارير</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- منطقة اختيار الطالب والبحث بالاسم أو الرقم أو الغرفة. -->
+    <main class="container pb-5">
+        <section class="card p-3 mt-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-lg-8 position-relative">
+                    <label for="studentSearch" class="form-label fw-bold">اختر الطالب</label>
+                    <input id="studentSearch" class="form-control" autocomplete="off" placeholder="اكتب الاسم أو رقم الطالب أو الغرفة...">
+                    <div id="studentResults" class="student-results list-group shadow-sm d-none"></div>
+                </div>
+                <div class="col-lg-4">
+                    <select id="studentSelect" class="form-select">
+                        <option value="">-- اختر طالباً --</option>
+                    </select>
+                </div>
+            </div>
+            <div id="loadMessage" class="small text-muted mt-2">جاري تحميل بيانات الطلاب...</div>
+        </section>
+
+        <!-- بطاقة هوية الطالب وأزرار التواصل والرمز الرقمي. -->
+        <section id="portfolioContent" class="d-none">
+            <div class="card p-3 mt-3 student-identity">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="avatar">👤</div>
+                    <div class="flex-grow-1">
+                        <h3 id="studentName" class="fw-bold mb-1"></h3>
+                        <div class="text-muted small"><span id="studentRoom"></span> · <span id="studentPhone"></span></div>
+                        <div id="studentRatingSmall" class="mt-2"></div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-success btn-sm" onclick="sendStudentSummary()">📱 واتساب</button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="showStudentQR()">🎫 رمز الطالب</button>
+                        <button class="btn btn-outline-dark btn-sm" onclick="copyStudentSummary()">📋 نسخ الملخص</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- بطاقات الإحصائيات الأساسية للطالب. -->
+            <div class="row g-3 mt-1">
+                <div class="col-6 col-lg-3"><div class="card stat-card p-3 border-top border-4 border-success"><small>حضور الصلوات</small><div id="prayerStat" class="stat-number text-success">0</div><small class="text-muted">من السجلات</small></div></div>
+                <div class="col-6 col-lg-3"><div class="card stat-card p-3 border-top border-4 border-primary"><small>الخواطر المنجزة</small><div id="khawatirStat" class="stat-number text-primary">0</div><small class="text-muted">تم الأداء</small></div></div>
+                <div class="col-6 col-lg-3"><div class="card stat-card p-3 border-top border-4 border-info"><small>حضور المحاضرات</small><div id="lectureStat" class="stat-number text-info">0%</div><small id="lectureStatDetail" class="text-muted">0 من 0</small></div></div>
+                <div class="col-6 col-lg-3"><div class="card stat-card p-3 border-top border-4 border-danger"><small>يحتاج متابعة</small><div id="alertStat" class="stat-number text-danger">لا</div><small class="text-muted">حسب السجل الحالي</small></div></div>
+            </div>
+
+            <!-- الرسم البياني للتقدم العام وتوزيع حضور المحاضرات. -->
+            <div class="row g-3 mt-1">
+                <div class="col-lg-7"><div class="card p-3 h-100"><h5 class="fw-bold mb-3">📈 مؤشر التقدم الزمني</h5><div class="chart-box"><canvas id="progressChart"></canvas></div></div></div>
+                <div class="col-lg-5"><div class="card p-3 h-100"><h5 class="fw-bold mb-3">🎓 حضور المحاضرات</h5><div class="chart-box"><canvas id="lectureChart"></canvas></div></div></div>
+            </div>
+
+            <!-- التقييم الذكي للطالب بناءً على المؤشرات المتاحة. -->
+            <div class="card p-3 mt-3 rating-box">
+                <h5 class="fw-bold mb-2">🧭 التقييم المختصر</h5>
+                <div id="ratingText" class="fw-bold"></div>
+                <p id="ratingAdvice" class="small text-muted mb-0 mt-2"></p>
+            </div>
+
+            <!-- السجل الموحد للصلوات والخواطر والمحاضرات. -->
+            <div class="card p-3 mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+                    <h5 class="fw-bold mb-0">🗓️ السجل الزمني الشامل</h5>
+                    <select id="timelineFilter" class="form-select form-select-sm" style="max-width: 180px;" onchange="renderTimeline()">
+                        <option value="all">كل الأنشطة</option>
+                        <option value="prayer">الصلوات</option>
+                        <option value="khawatir">الخواطر</option>
+                        <option value="lecture">المحاضرات</option>
+                    </select>
+                </div>
+                <div id="timelineTable" class="table-responsive"></div>
+            </div>
+        </section>
+
+        <!-- الحالة الافتراضية قبل اختيار طالب. -->
+        <section id="emptyPortfolio" class="card empty-state mt-3"><div class="text-center"><div style="font-size: 42px;">🔎</div><p class="mb-0">اختر طالباً لعرض ملفه الشامل.</p></div></section>
+    </main>
+
+    <!-- نافذة عرض رمز الطالب الرقمي. -->
+    <div class="modal fade" id="qrModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4">
+            <div class="modal-header"><h5 class="modal-title fw-bold">🎫 رمز الطالب</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body text-center"><div id="qrCode" class="d-flex justify-content-center mb-3"></div><p id="qrCaption" class="fw-bold"></p><button class="btn btn-success w-100" onclick="sendStudentSummary()">إرسال بيانات الطالب واتساب</button></div>
+        </div></div>
+    </div>
+
+    <!-- مكتبة مكونات Bootstrap التفاعلية. -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- منطق تحميل قاعدة البيانات وتجميع بيانات الملف الشامل. -->
+    <script>
+        // تعريف مفاتيح الحالة العامة للصفحة.
+        const DB_KEY = 'prayer_pro_v8';
+        let db = null;
+        let SQL = null;
+        let students = [];
+        let selectedStudent = null;
+        let portfolioData = null;
+        let progressChart = null;
+        let lectureChart = null;
+
+        // دالة حماية النصوص القادمة من قاعدة البيانات قبل إدراجها في HTML.
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
+        }
+
+        // دالة تنسيق التاريخ باللغة العربية مع دعم القيم الفارغة.
+        function formatDate(value) {
+            if (!value) return '-';
+            const date = new Date(value + (String(value).length === 10 ? 'T00:00:00' : ''));
+            if (Number.isNaN(date.getTime())) return value;
+            return new Intl.DateTimeFormat('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+        }
+
+        // دالة الحصول على أسماء أعمدة جدول للتحقق من اختلاف إصدارات قاعدة البيانات.
+        function tableColumns(tableName) {
+            try {
+                const result = db.exec(`PRAGMA table_info(${tableName})`);
+                return result.length ? result[0].values.map(row => row[1]) : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        // دالة تحويل نتيجة SQL إلى مصفوفة كائنات سهلة الاستخدام.
+        function rowsAsObjects(result) {
+            if (!result || !result.length) return [];
+            const columns = result[0].columns;
+            return result[0].values.map(row => Object.fromEntries(columns.map((column, index) => [column, row[index]])));
+        }
+
+        // تشغيل قاعدة البيانات المحلية وتهيئة قائمة الطلاب.
+        async function initPortfolio() {
+            try {
+                SQL = await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
+                const saved = localStorage.getItem(DB_KEY);
+                if (!saved) throw new Error('لا توجد قاعدة بيانات محلية. افتح الصفحة الرئيسية أولاً.');
+                db = new SQL.Database(new Uint8Array(JSON.parse(saved)));
+                loadStudents();
+                bindStudentSearch();
+                selectFromUrl();
+                document.getElementById('loadMessage').textContent = `تم تحميل ${students.length} طالباً.`;
+            } catch (error) {
+                document.getElementById('loadMessage').className = 'small text-danger mt-2';
+                document.getElementById('loadMessage').textContent = error.message;
+            }
+        }
+
+        // تحميل الطلاب بترتيب الغرف ثم الأسماء لتسهيل الاختيار.
+        function loadStudents() {
+            const result = db.exec('SELECT id, name, room, phone FROM students ORDER BY CAST(room AS INTEGER), name COLLATE NOCASE');
+            students = rowsAsObjects(result);
+            const select = document.getElementById('studentSelect');
+            select.innerHTML = '<option value="">-- اختر طالباً --</option>' + students.map(student => `<option value="${student.id}">${escapeHtml(student.name)} — غرفة ${escapeHtml(student.room)}</option>`).join('');
+            select.addEventListener('change', () => chooseStudent(select.value));
+        }
+
+        // ربط حقل البحث وإظهار النتائج المطابقة أثناء الكتابة.
+        function bindStudentSearch() {
+            const search = document.getElementById('studentSearch');
+            search.addEventListener('input', () => {
+                const query = search.value.trim().toLowerCase();
+                const box = document.getElementById('studentResults');
+                if (!query) { box.classList.add('d-none'); return; }
+                const matches = students.filter(student => `${student.name} ${student.room} ${student.id}`.toLowerCase().includes(query)).slice(0, 30);
+                box.innerHTML = matches.length ? matches.map(student => `<button class="list-group-item list-group-item-action" onclick="chooseStudent(${student.id})"><b>${escapeHtml(student.name)}</b><small class="d-block text-muted">غرفة ${escapeHtml(student.room)} · رقم ${student.id}</small></button>`).join('') : '<div class="list-group-item text-muted">لا توجد نتائج</div>';
+                box.classList.remove('d-none');
+            });
+            document.addEventListener('click', event => { if (!event.target.closest('#studentSearch') && !event.target.closest('#studentResults')) document.getElementById('studentResults').classList.add('d-none'); });
+        }
+
+        // اختيار طالب وعرض بياناته الكاملة.
+        function chooseStudent(studentId) {
+            selectedStudent = students.find(student => String(student.id) === String(studentId));
+            if (!selectedStudent) return;
+            document.getElementById('studentSelect').value = selectedStudent.id;
+            document.getElementById('studentSearch').value = selectedStudent.name;
+            document.getElementById('studentResults').classList.add('d-none');
+            document.getElementById('emptyPortfolio').classList.add('d-none');
+            document.getElementById('portfolioContent').classList.remove('d-none');
+            renderPortfolio();
+        }
+
+        // اختيار الطالب تلقائياً عند فتح الرابط بالصيغة student_portfolio.html?id=123.
+        function selectFromUrl() {
+            const id = new URLSearchParams(window.location.search).get('id');
+            if (id) chooseStudent(id);
+        }
+
+        // قراءة سجل الصلوات للطالب المحدد.
+        function readPrayerData(studentId) {
+            const result = db.exec('SELECT date, prayer, status, notes FROM attendance WHERE s_id = ? ORDER BY date DESC', [studentId]);
+            return rowsAsObjects(result).map(row => ({ type: 'prayer', date: row.date, title: `صلاة ${row.prayer || ''}`, status: row.status || 'غير محدد', notes: row.notes || '' }));
+        }
+
+        // قراءة سجل الخواطر مع دعم إصدارات الجدول القديمة والجديدة.
+        function readKhawatirData(studentId) {
+            const columns = tableColumns('khawatir');
+            if (!columns.length) return [];
+            const prayerColumn = columns.includes('prayer') ? 'prayer' : '"" AS prayer';
+            const dateColumn = columns.includes('k_date') ? 'k_date' : (columns.includes('date') ? 'date' : '"" AS k_date');
+            const notesColumn = columns.includes('notes') ? 'notes' : '"" AS notes';
+            const result = db.exec(`SELECT ${dateColumn}, ${prayerColumn}, status, ${notesColumn} FROM khawatir WHERE s_id = ? ORDER BY ${columns.includes('k_date') ? 'k_date' : (columns.includes('date') ? 'date' : 'rowid')} DESC`, [studentId]);
+            return rowsAsObjects(result).map(row => ({ type: 'khawatir', date: row.k_date, title: `خاطرة ${row.prayer || ''}`, status: row.status || 'غير محدد', notes: row.notes || '' }));
+        }
+
+        // قراءة سجل المحاضرات واحتساب الغياب تلقائياً للمحاضرات التي لم يسجل فيها الطالب.
+        function readLectureData(studentId) {
+            const lecturesColumns = tableColumns('lectures');
+            const attendanceColumns = tableColumns('lecture_attendance');
+            if (!lecturesColumns.length || !attendanceColumns.length) return [];
+            const result = db.exec(`SELECT l.title, l.l_date, COALESCE(la.status, 'غائب') AS status, COALESCE(la.notes, '') AS notes, COALESCE(la.timestamp, '') AS timestamp FROM lectures l LEFT JOIN lecture_attendance la ON la.l_id = l.id AND la.s_id = ? ORDER BY l.l_date DESC, l.id DESC`, [studentId]);
+            return rowsAsObjects(result).map(row => ({ type: 'lecture', date: row.l_date, title: `محاضرة ${row.title || ''}`, status: row.status, notes: row.notes || (row.timestamp ? `وقت التحضير: ${row.timestamp}` : '') }));
+        }
+
+        // تجميع كل مصادر الطالب في كائن واحد لإعادة استخدامه في الواجهة والرسوم والتصدير.
+        function collectPortfolioData() {
+            const prayers = readPrayerData(selectedStudent.id);
+            const khawatir = readKhawatirData(selectedStudent.id);
+            const lectures = readLectureData(selectedStudent.id);
+            const lecturePresent = lectures.filter(item => item.status === 'حاضر').length;
+            const lectureExcused = lectures.filter(item => item.status === 'بعذر').length;
+            const lectureAbsent = lectures.filter(item => item.status === 'غائب').length;
+            const prayerPresent = prayers.filter(item => ['صلى', 'حاضر'].includes(item.status)).length;
+            const khawatirDone = khawatir.filter(item => item.status === 'تم الأداء').length;
+            return { prayers, khawatir, lectures, timeline: [...prayers, ...khawatir, ...lectures], prayerPresent, khawatirDone, lecturePresent, lectureExcused, lectureAbsent };
+        }
+
+        // تحديث بطاقة الهوية والإحصائيات والتقييم والرسوم والسجل الزمني.
+        function renderPortfolio() {
+            portfolioData = collectPortfolioData();
+            document.getElementById('studentName').textContent = selectedStudent.name;
+            document.getElementById('studentRoom').textContent = `غرفة ${selectedStudent.room || '-'}`;
+            document.getElementById('studentPhone').textContent = selectedStudent.phone ? `جوال: ${selectedStudent.phone}` : 'لا يوجد رقم جوال';
+            document.getElementById('prayerStat').textContent = portfolioData.prayerPresent;
+            document.getElementById('khawatirStat').textContent = portfolioData.khawatirDone;
+            const lectureTotal = portfolioData.lectures.length;
+            const lecturePercent = lectureTotal ? Math.round((portfolioData.lecturePresent / lectureTotal) * 100) : 0;
+            document.getElementById('lectureStat').textContent = `${lecturePercent}%`;
+            document.getElementById('lectureStatDetail').textContent = `${portfolioData.lecturePresent} من ${lectureTotal} · ${portfolioData.lectureExcused} بعذر`;
+            const alerts = portfolioData.lectures.filter(item => item.status === 'غائب').length + portfolioData.prayers.filter(item => item.status === 'نائم').length;
+            document.getElementById('alertStat').textContent = alerts >= 3 ? 'نعم' : 'لا';
+            const rating = calculateRating(alerts, lecturePercent, portfolioData.khawatirDone);
+            document.getElementById('studentRatingSmall').innerHTML = `<span class="badge ${rating.badge}">${rating.title}</span>`;
+            document.getElementById('ratingText').textContent = rating.title;
+            document.getElementById('ratingAdvice').textContent = rating.advice;
+            renderCharts();
+            renderTimeline();
+        }
+
+        // حساب تقييم تربوي مبسط وشفاف اعتماداً على المؤشرات المتاحة فقط.
+        function calculateRating(alerts, lecturePercent, khawatirDone) {
+            if (!portfolioData || (!portfolioData.timeline.length && !lecturePercent)) return { title: 'لا توجد بيانات كافية', badge: 'bg-secondary', advice: 'ابدأ بتسجيل الأنشطة حتى يظهر تقييم الطالب.' };
+            if (alerts >= 5) return { title: 'يحتاج متابعة', badge: 'bg-danger', advice: 'يُنصح بمراجعة أسباب الغياب والتواصل مع الطالب أو ولي أمره.' };
+            if (lecturePercent >= 85 && alerts < 3) return { title: 'طالب متميز', badge: 'bg-success', advice: 'استمر على هذا المستوى، ويمكن تحفيز الطالب وإبرازه في قائمة الشرف.' };
+            if (lecturePercent >= 60 && alerts < 5) return { title: 'مستوى جيد', badge: 'bg-primary', advice: 'المستوى مستقر، مع فرصة لتحسين الحضور والمواظبة أكثر.' };
+            return { title: 'يحتاج تحفيزاً', badge: 'bg-warning text-dark', advice: 'ضع هدفاً أسبوعياً واضحاً وتابع التحسن في السجل القادم.' };
+        }
+
+        // إنشاء رسوم التقدم الزمني وتوزيع حضور المحاضرات.
+        function renderCharts() {
+            const lectureData = portfolioData.lectures;
+            if (lectureChart) lectureChart.destroy();
+            lectureChart = new Chart(document.getElementById('lectureChart'), { type: 'doughnut', data: { labels: ['حاضر', 'غائب', 'بعذر'], datasets: [{ data: [portfolioData.lecturePresent, portfolioData.lectureAbsent, portfolioData.lectureExcused], backgroundColor: ['#198754', '#dc3545', '#f0ad4e'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+            const grouped = {};
+            portfolioData.prayers.forEach(item => { const key = item.date || 'غير محدد'; grouped[key] = (grouped[key] || 0) + (['صلى', 'حاضر'].includes(item.status) ? 1 : 0); });
+            const dates = Object.keys(grouped).sort().slice(-14);
+            if (progressChart) progressChart.destroy();
+            progressChart = new Chart(document.getElementById('progressChart'), { type: 'line', data: { labels: dates.map(formatDate), datasets: [{ label: 'عدد الصلوات المسجلة بحضور', data: dates.map(date => grouped[date]), borderColor: '#168aad', backgroundColor: 'rgba(22,138,173,.15)', fill: true, tension: .3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } } });
+        }
+
+        // عرض السجل الزمني مع دعم الفلترة حسب نوع النشاط.
+        function renderTimeline() {
+            if (!portfolioData) return;
+            const filter = document.getElementById('timelineFilter').value;
+            const items = portfolioData.timeline.filter(item => filter === 'all' || item.type === filter).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+            const table = document.getElementById('timelineTable');
+            if (!items.length) { table.innerHTML = '<div class="empty-state">لا توجد سجلات لهذا الطالب.</div>'; return; }
+            const typeLabel = { prayer: 'صلاة', khawatir: 'خاطرة', lecture: 'محاضرة' };
+            table.innerHTML = `<table class="table table-hover align-middle text-center"><thead><tr><th>التاريخ</th><th>النشاط</th><th>الحالة</th><th>الملاحظة</th></tr></thead><tbody>${items.map(item => `<tr><td>${escapeHtml(formatDate(item.date))}</td><td><span class="badge bg-light text-dark border timeline-badge">${typeLabel[item.type]}</span><div class="small mt-1">${escapeHtml(item.title)}</div></td><td>${statusBadge(item.status)}</td><td class="small text-muted">${escapeHtml(item.notes || '-')}</td></tr>`).join('')}</tbody></table>`;
+        }
+
+        // تنسيق لون الحالة في السجل الموحد.
+        function statusBadge(status) {
+            const color = status === 'صلى' || status === 'حاضر' || status === 'تم الأداء' ? 'bg-success' : (status === 'بعذر' || status === 'رافض بعذر' ? 'bg-warning text-dark' : (status === 'غائب' || status === 'نائم' || status === 'رافض بدون عذر' ? 'bg-danger' : 'bg-secondary'));
+            return `<span class="badge ${color}">${escapeHtml(status)}</span>`;
+        }
+
+        // إنشاء تقرير نصي مختصر قابل للنسخ أو الإرسال عبر واتساب.
+        function buildStudentSummary() {
+            const d = portfolioData;
+            const lectureTotal = d.lectures.length;
+            const lecturePercent = lectureTotal ? Math.round((d.lecturePresent / lectureTotal) * 100) : 0;
+            return `*📋 الملف الشامل للطالب*\n👤 الاسم: ${selectedStudent.name}\n🚪 الغرفة: ${selectedStudent.room}\n\n🕌 حضور الصلوات: ${d.prayerPresent}\n🎤 الخواطر المنجزة: ${d.khawatirDone}\n🎓 المحاضرات: ${d.lecturePresent} حاضر، ${d.lectureAbsent} غائب، ${d.lectureExcused} بعذر (${lecturePercent}%)\n🧭 التقييم: ${document.getElementById('ratingText').textContent}\n📅 تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`;
+        }
+
+        // نسخ الملخص إلى الحافظة عند استخدام الجهاز دون واتساب.
+        function copyStudentSummary() {
+            if (!portfolioData) return;
+            navigator.clipboard.writeText(buildStudentSummary()).then(() => alert('تم نسخ ملخص الطالب.')).catch(() => alert('تعذر النسخ، حاول مرة أخرى.'));
+        }
+
+        // فتح واتساب برسالة التقرير إلى رقم الطالب المسجل.
+        function sendStudentSummary() {
+            if (!selectedStudent || !portfolioData) return;
+            if (!selectedStudent.phone) return alert('لا يوجد رقم جوال لهذا الطالب. أضف الرقم من تبويب الإدارة أولاً.');
+            const phone = String(selectedStudent.phone).replace(/\D/g, '');
+            if (!phone) return alert('رقم الجوال غير صالح.');
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(buildStudentSummary())}`, '_blank');
+        }
+
+        // عرض رمز QR الذي يحمل رقم الطالب الفريد.
+        function showStudentQR() {
+            if (!selectedStudent) return;
+            document.getElementById('qrCode').innerHTML = '';
+            new QRCode(document.getElementById('qrCode'), { text: `STUDENT_ID:${selectedStudent.id}`, width: 190, height: 190, correctLevel: QRCode.CorrectLevel.H });
+            document.getElementById('qrCaption').textContent = `${selectedStudent.name} — رقم الطالب ${selectedStudent.id}`;
+            new bootstrap.Modal(document.getElementById('qrModal')).show();
+        }
+
+        // تشغيل الصفحة بعد اكتمال عناصر HTML.
+        window.addEventListener('DOMContentLoaded', initPortfolio);
+    </script>
+</body>
+</html>
+ر
