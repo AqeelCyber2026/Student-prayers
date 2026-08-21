@@ -301,173 +301,71 @@
         }
     }
 
-    // التحقق من أعمدة أي جدول قبل بناء الاستعلامات لتفادي توقف الصفحة مع قواعد البيانات القديمة.
-    function tableColumns(tableName) {
-        const result = db.exec(`PRAGMA table_info(${tableName})`);
-        return result.length ? result[0].values.map(row => row[1]) : [];
-    }
-
-    // إضافة عمود مفقود فقط، مع الإبقاء على جميع السجلات السابقة دون حذف أو إعادة إنشاء الجدول.
-    function ensureColumn(tableName, columnName, columnType) {
-        if (!tableColumns(tableName).includes(columnName)) {
-            db.run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`);
-        }
-    }
-
-    // إنشاء الجداول المطلوبة وإتاحة مخططي الخواطر القديم والجديد في الوقت نفسه.
     function checkSchema() {
         try {
-            db.run("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, room TEXT, phone TEXT)");
-            db.run("CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, s_id INTEGER, status TEXT, notes TEXT, prayer TEXT, date TEXT)");
-            db.run("CREATE TABLE IF NOT EXISTS khawatir (id INTEGER PRIMARY KEY AUTOINCREMENT, s_id INTEGER, prayer TEXT, k_date TEXT, date TEXT, status TEXT, notes TEXT)");
+            // التحقق من وجود جدول الخواطر والمحاضرات
+            db.run("CREATE TABLE IF NOT EXISTS khawatir (id INTEGER PRIMARY KEY AUTOINCREMENT, s_id INTEGER, date TEXT, status TEXT, notes TEXT)");
             db.run("CREATE TABLE IF NOT EXISTS lectures (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, l_date TEXT)");
             db.run("CREATE TABLE IF NOT EXISTS lecture_attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, l_id INTEGER, s_id INTEGER, status TEXT, notes TEXT, timestamp TEXT)");
-            ensureColumn('students', 'phone', 'TEXT');
-            ensureColumn('khawatir', 'prayer', 'TEXT');
-            ensureColumn('khawatir', 'k_date', 'TEXT');
-            ensureColumn('khawatir', 'date', 'TEXT');
-            ensureColumn('khawatir', 'notes', 'TEXT');
             saveDB();
-        } catch(e) {
-            console.error('Schema migration error:', e);
-        }
+        } catch(e) { console.error(e); }
     }
 
-    // حفظ نسخة قاعدة البيانات الحالية في التخزين المحلي بعد كل تعديل.
     function saveDB() {
         localStorage.setItem(DB_KEY, JSON.stringify(Array.from(db.export())));
     }
 
-    // تنفيذ الاستعلام بأمان مع دعم معاملات ? وإرجاع نفس بنية db.exec حتى لا تتوقف لوحة التحكم.
-    function safeExec(sql, params = []) {
-        try {
-            if (!params || !params.length) return db.exec(sql);
-            const statement = db.prepare(sql);
-            statement.bind(params);
-            const columns = statement.getColumnNames();
-            const values = [];
-            while (statement.step()) {
-                const row = statement.getAsObject();
-                values.push(columns.map(column => row[column]));
-            }
-            statement.free();
-            return [{ columns, values }];
-        } catch (error) {
-            console.error('Database query error:', error, sql);
-            return [];
-        }
-    }
-
-    // استخراج تاريخ الجهاز بصيغة محلية ثابتة بدلاً من UTC الذي قد يغيّر اليوم في بعض الهواتف.
-    function localDateISO(date = new Date()) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    // تحديد تعبير تاريخ الخاطرة حسب إصدار قاعدة البيانات المستخدم حالياً.
-    function khawatirDateExpression(alias = 'k') {
-        const columns = tableColumns('khawatir');
-        if (columns.includes('k_date') && columns.includes('date')) return `COALESCE(${alias}.k_date, ${alias}.date)`;
-        if (columns.includes('k_date')) return `${alias}.k_date`;
-        if (columns.includes('date')) return `${alias}.date`;
-        return "''";
-    }
-
-    // تحديد تعبير الصلاة مع دعم السجلات القديمة التي لا تحتوي على عمود الصلاة.
-    function khawatirPrayerExpression(alias = 'k') {
-        return tableColumns('khawatir').includes('prayer') ? `${alias}.prayer` : "''";
-    }
-
-    // اسم اليوم للتاريخ المخزن بصيغة YYYY-MM-DD، مع تجنب انزياح UTC في الجوال.
-    function dayNameForDate(dateString) {
-        if (!dateString) return '';
-        const date = new Date(`${dateString}T12:00:00`);
-        return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('ar-SA', { weekday: 'long' });
-    }
-
-    // تنسيق واضح للتاريخ واليوم داخل التقارير والرسائل.
-    function reportDateLabel(dateString) {
-        const day = dayNameForDate(dateString);
-        return day ? `${day} | ${dateString}` : (dateString || 'غير محدد');
-    }
-
-    // تحديث عنصر نصي مع قيمة افتراضية حتى تظهر اللوحة بشكل سليم عند عدم وجود سجلات.
-    function setText(id, value) {
-        const element = document.getElementById(id);
-        if (element) element.innerText = value;
-    }
-
-    // تحديث لوحة التحكم بالأرقام اليومية وقائمتي الشرف والخطر مع قيم افتراضية عند عدم وجود بيانات.
+    // --- وظائف Hub ---
     function refreshHub() {
         if (!db) return;
+        
+        // 1. إجمالي الطلاب
+        const total = db.exec("SELECT COUNT(*) FROM students")[0].values[0][0];
+        document.getElementById('hub-total-students').innerText = total;
 
-        // قراءة إجمالي الطلاب بأمان حتى لا تتوقف اللوحة إذا كانت القاعدة فارغة.
-        const totalResult = safeExec("SELECT COUNT(*) FROM students");
-        setText('hub-total-students', totalResult.length ? totalResult[0].values[0][0] : 0);
+        // 2. حضور الفجر اليوم
+        const today = new Date().toISOString().split('T')[0];
+        const fajr = db.exec(`SELECT COUNT(*) FROM attendance WHERE date='${today}' AND prayer='الفجر' AND status='صلى'`)[0].values[0][0];
+        document.getElementById('hub-fajr-today').innerText = fajr;
 
-        // استخدام تاريخ الجهاز المحلي بدلاً من UTC حتى يظهر اليوم الصحيح على الجوال.
-        const today = localDateISO();
-        const fajrResult = safeExec("SELECT COUNT(*) FROM attendance WHERE date = ? AND prayer = ? AND status = ?", [today, 'الفجر', 'صلى']);
-        setText('hub-fajr-today', fajrResult.length ? fajrResult[0].values[0][0] : 0);
+        // 3. خواطر اليوم
+        const khawat = db.exec(`SELECT COUNT(*) FROM khawatir WHERE date='${today}' AND status='تم الأداء'`)[0].values[0][0];
+        document.getElementById('hub-khawatir-today').innerText = khawat;
 
-        // قراءة تاريخ الخواطر من k_date أو date حسب مخطط القاعدة الحالي.
-        const khawatirDate = khawatirDateExpression('k');
-        const khawatirResult = safeExec(`SELECT COUNT(*) FROM khawatir k WHERE ${khawatirDate} = ? AND k.status = ?`, [today, 'تم الأداء']);
-        setText('hub-khawatir-today', khawatirResult.length ? khawatirResult[0].values[0][0] : 0);
-
-        // بناء قائمة الشرف حتى عند عدم وجود سجلات، مع ترتيب ثابت للنتائج.
-        const honorResult = safeExec(`
-            SELECT s.name, SUM(CASE WHEN a.status = 'صلى' THEN 1 ELSE 0 END) AS score
+        // 4. قائمة الشرف
+        const honor = db.exec(`
+            SELECT s.name, COUNT(CASE WHEN a.status='صلى' THEN 1 END) as score
             FROM students s
-            LEFT JOIN attendance a ON s.id = a.s_id
-            GROUP BY s.id, s.name
-            HAVING score > 0
-            ORDER BY score DESC, s.name ASC
-            LIMIT 5
+            JOIN attendance a ON s.id = a.s_id
+            GROUP BY s.id ORDER BY score DESC LIMIT 5
         `);
         const honorList = document.getElementById('honorList');
-        honorList.innerHTML = honorResult.length && honorResult[0].values.length
-            ? honorResult[0].values.map(v => `
+        if (honor.length) {
+            honorList.innerHTML = honor[0].values.map(v => `
                 <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
                     <span>🌟 ${v[0]}</span>
                     <span class="badge badge-honor rounded-pill">${v[1]} صلاة</span>
                 </div>
-            `).join('')
-            : '<div class="text-muted small py-2">لا توجد سجلات حضور كافية بعد.</div>';
+            `).join('');
+        }
 
-        // بناء منطقة الخطر وإظهار عدد الطلاب الذين تجاوزوا خمس حالات غياب.
-        const dangerResult = safeExec(`
-            SELECT s.name, SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) AS score
+        // 5. منطقة الخطر
+        const danger = db.exec(`
+            SELECT s.name, COUNT(CASE WHEN a.status='نائم' THEN 1 END) as score
             FROM students s
-            LEFT JOIN attendance a ON s.id = a.s_id
-            GROUP BY s.id, s.name
-            HAVING score > 0
-            ORDER BY score DESC, s.name ASC
-            LIMIT 5
+            JOIN attendance a ON s.id = a.s_id
+            GROUP BY s.id ORDER BY score DESC LIMIT 5
         `);
         const dangerList = document.getElementById('dangerZoneList');
-        dangerList.innerHTML = dangerResult.length && dangerResult[0].values.length
-            ? dangerResult[0].values.map(v => `
+        if (danger.length) {
+            dangerList.innerHTML = danger[0].values.map(v => `
                 <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
                     <span>⚠️ ${v[0]}</span>
                     <span class="badge badge-danger-zone rounded-pill">${v[1]} غياب</span>
                 </div>
-            `).join('')
-            : '<div class="text-muted small py-2">لا توجد حالات غياب مسجلة.</div>';
-
-        // حساب التنبيهات من كامل النتائج بدلاً من الاقتصار على الخمسة المعروضين.
-        const alertResult = safeExec(`
-            SELECT COUNT(*) FROM (
-                SELECT s.id
-                FROM students s
-                LEFT JOIN attendance a ON s.id = a.s_id
-                GROUP BY s.id
-                HAVING SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) > 5
-            )
-        `);
-        setText('hub-alerts-count', alertResult.length ? alertResult[0].values[0][0] : 0);
+            `).join('');
+            document.getElementById('hub-alerts-count').innerText = danger[0].values.filter(v => v[1] > 5).length;
+        }
     }
 
     // --- وظائف التقارير ---
@@ -506,22 +404,8 @@
         if (time !== "0") filter += ` AND a.date >= date('now', '-${time} days')`;
         else filter += ` AND a.date = date('now')`;
 
-        if (scope === 'student') {
-            const selectedId = Number(document.getElementById('selectedStudentId').value);
-            if (!selectedId) {
-                document.getElementById('reportOutput').innerHTML = '<div class="alert alert-warning text-center">اكتب اسم الطالب ثم اختره من قائمة النتائج أولاً.</div>';
-                return;
-            }
-            filter += ` AND s.id = ${selectedId}`;
-        }
-        if (scope === 'room') {
-            const room = document.getElementById('roomNumber').value.trim().replace(/'/g, "''");
-            if (!room) {
-                document.getElementById('reportOutput').innerHTML = '<div class="alert alert-warning text-center">يرجى اختيار رقم الغرفة أولاً.</div>';
-                return;
-            }
-            filter += ` AND s.room = '${room}'`;
-        }
+        if (scope === 'student') filter += ` AND s.id = ${document.getElementById('selectedStudentId').value}`;
+        if (scope === 'room') filter += ` AND s.room = '${document.getElementById('roomNumber').value}'`;
 
         const sql = `
             SELECT s.name, s.room, a.date, a.prayer, a.status, a.notes, s.phone, s.id
@@ -547,7 +431,8 @@
             if (currentStudent !== studentKey) {
                 if (currentStudent !== "") html += `</div></div>`;
                 currentStudent = studentKey;
-                const dayName = dayNameForDate(v[2]);
+                const dateObj = new Date(v[2]);
+                const dayName = dateObj.toLocaleDateString('ar-SA', { weekday: 'long' });
                 html += `
                     <div class="student-block">
                         <div class="student-header">
@@ -585,80 +470,69 @@
 
     // --- وظائف التحليل والرسوم ---
     function renderCharts() {
-        if (!db) return;
-        if (typeof Chart === 'undefined') {
-            alert('تعذر تحميل مكتبة الرسوم. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.');
-            return;
-        }
+        const time = document.getElementById('timeFrame').value;
+        const filter = time !== "0" ? `WHERE a.date >= date('now', '-${time} days')` : `WHERE a.date = date('now')`;
 
-        const time = Number(document.getElementById('timeFrame').value || 0);
-        const filter = time > 0
-            ? `a.date >= date('now', '-${time} days')`
-            : `a.date = date('now')`;
-
-        function drawChart(key, canvasId, type, labels, data, datasetOptions, options = {}) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-            if (charts[key]) charts[key].destroy();
-            charts[key] = new Chart(canvas.getContext('2d'), {
-                type,
-                data: { labels, datasets: [{ data, ...datasetOptions }] },
-                options: { responsive: true, maintainAspectRatio: false, ...options }
+        // 1. الأكثر غياباً
+        const resAbs = db.exec(`
+            SELECT s.name, COUNT(*) as count FROM attendance a 
+            JOIN students s ON a.s_id = s.id 
+            ${filter} AND a.status='نائم' 
+            GROUP BY s.id ORDER BY count DESC LIMIT 5
+        `);
+        
+        if (resAbs.length) {
+            const ctx = document.getElementById('absentStudentsChart').getContext('2d');
+            if (charts.absent) charts.absent.destroy();
+            charts.absent = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: resAbs[0].values.map(v => v[0]),
+                    datasets: [{ label: 'مرات الغياب', data: resAbs[0].values.map(v => v[1]), backgroundColor: '#e74c3c' }]
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
 
-        // الأكثر غياباً من خلال الفترة المختارة.
-        const absResult = safeExec(`
-            SELECT s.name, COUNT(*) AS count
-            FROM attendance a
-            JOIN students s ON a.s_id = s.id
-            WHERE ${filter} AND a.status = 'نائم'
-            GROUP BY s.id, s.name
-            ORDER BY count DESC, s.name ASC
-            LIMIT 5
+        // 2. ترتيب الغرف
+        const resRoom = db.exec(`
+            SELECT s.room, COUNT(*) as count FROM attendance a 
+            JOIN students s ON a.s_id = s.id 
+            ${filter} AND a.status='صلى' 
+            GROUP BY s.room ORDER BY count DESC LIMIT 5
         `);
-        const absRows = absResult.length ? absResult[0].values : [];
-        drawChart('absent', 'absentStudentsChart', 'bar', absRows.map(v => v[0]), absRows.map(v => v[1]), {
-            label: 'مرات الغياب', backgroundColor: '#e74c3c', borderRadius: 6
-        }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } });
+        
+        if (resRoom.length) {
+            const ctx = document.getElementById('roomsRankChart').getContext('2d');
+            if (charts.rooms) charts.rooms.destroy();
+            charts.rooms = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: resRoom[0].values.map(v => 'غرفة ' + v[0]),
+                    datasets: [{ data: resRoom[0].values.map(v => v[1]), backgroundColor: ['#2ecc71', '#3498db', '#f1c40f', '#9b59b6', '#e67e22'] }]
+                },
+                options: { maintainAspectRatio: false }
+            });
+        }
 
-        // أكثر الغرف غياباً، بدلاً من احتساب الحضور فقط.
-        const roomResult = safeExec(`
-            SELECT s.room, COUNT(*) AS count
-            FROM attendance a
-            JOIN students s ON a.s_id = s.id
-            WHERE ${filter} AND a.status = 'نائم'
-            GROUP BY s.room
-            ORDER BY count DESC, CAST(s.room AS INTEGER) ASC
-            LIMIT 5
-        `);
-        const roomRows = roomResult.length ? roomResult[0].values : [];
-        drawChart('rooms', 'roomsRankChart', 'pie', roomRows.map(v => 'غرفة ' + v[0]), roomRows.map(v => v[1]), {
-            label: 'مرات الغياب', backgroundColor: ['#e74c3c', '#f39c12', '#3498db', '#9b59b6', '#2ecc71']
-        });
-
-        // ترتيب الطلاب من الأكثر غياباً إلى الأفضل حضوراً.
-        const rankResult = safeExec(`
-            SELECT s.name, s.room,
-                   SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) AS abs_count,
-                   SUM(CASE WHEN a.status = 'صلى' THEN 1 ELSE 0 END) AS present_count
+        // 3. جدول الترتيب العام
+        const resRank = db.exec(`
+            SELECT s.name, s.room, COUNT(CASE WHEN a.status='نائم' THEN 1 END) as abs_count
             FROM students s
             LEFT JOIN attendance a ON s.id = a.s_id
-            GROUP BY s.id, s.name, s.room
-            ORDER BY abs_count DESC, present_count ASC, s.name ASC
+            GROUP BY s.id ORDER BY abs_count DESC, s.name ASC
         `);
         const tbody = document.getElementById('rankingTableBody');
-        if (tbody) {
-            const rows = rankResult.length ? rankResult[0].values : [];
-            tbody.innerHTML = rows.length ? rows.map((v, i) => `
+        if (resRank.length) {
+            tbody.innerHTML = resRank[0].values.map((v, i) => `
                 <tr>
-                    <td>${i + 1}</td>
+                    <td>${i+1}</td>
                     <td class="fw-bold">${v[0]}</td>
                     <td>${v[1]}</td>
                     <td><span class="badge bg-danger rounded-pill">${v[2]}</span></td>
-                    <td>${Number(v[2]) > 5 ? '⚠️ متابعة' : '✅ ممتاز'}</td>
+                    <td>${v[2] > 5 ? '⚠️ متابعة' : '✅ ممتاز'}</td>
                 </tr>
-            `).join('') : '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات للفترة المختارة.</td></tr>';
+            `).join('');
         }
     }
 
@@ -831,40 +705,20 @@
     // --- وظائف إضافية ---
     function sendWhatsApp(phone, name, date) {
         if (!phone) return alert("يرجى إضافة الرقم أولاً");
-        const msg = `*تقرير متابعة*\n👤 الطالب: ${name}\n📅 التاريخ: ${reportDateLabel(date)}\n(يرجى مراجعة حالة الصلوات في التطبيق)`;
+        const msg = `*تقرير متابعة*\n👤 الطالب: ${name}\n📅 التاريخ: ${date}\n(يرجى مراجعة حالة الصلوات في التطبيق)`;
         window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
     function copyToWhatsApp() {
-        const blocks = document.querySelectorAll('.student-block');
-        if (!blocks.length) return alert('أنشئ التقرير أولاً ثم اضغط نسخ التقرير.');
-
-        let text = `📋 *تقرير متابعة الصلوات*\n📅 تاريخ النسخ: ${new Date().toLocaleDateString('ar-SA')}\n🗓️ اليوم: ${new Date().toLocaleDateString('ar-SA', { weekday: 'long' })}\n\n`;
-        blocks.forEach(block => {
-            const name = block.querySelector('.fw-bold')?.innerText || '';
-            const date = block.querySelector('.student-header small')?.innerText || '';
-            text += `👤 *${name}*\n📅 ${date}\n`;
-            block.querySelectorAll('.prayer-item').forEach(item => {
-                text += `  - ${item.innerText.replace(/\n/g, ': ')}\n`;
+        let text = "📋 تقرير المتابعة اليومي\n\n";
+        document.querySelectorAll('.student-block').forEach(b => {
+            text += `👤 ${b.querySelector('.fw-bold').innerText}\n`;
+            b.querySelectorAll('.prayer-item').forEach(p => {
+                text += `  - ${p.innerText.replace('\n', ': ')}\n`;
             });
             text += "\n";
         });
-
-        const copyPromise = navigator.clipboard && navigator.clipboard.writeText
-            ? navigator.clipboard.writeText(text)
-            : Promise.reject(new Error('Clipboard API unavailable'));
-        copyPromise.then(() => alert("تم نسخ التقرير مع التاريخ واسم اليوم!"))
-            .catch(() => {
-                const area = document.createElement('textarea');
-                area.value = text;
-                area.style.position = 'fixed';
-                area.style.opacity = '0';
-                document.body.appendChild(area);
-                area.select();
-                document.execCommand('copy');
-                area.remove();
-                alert("تم نسخ التقرير مع التاريخ واسم اليوم!");
-            });
+        navigator.clipboard.writeText(text).then(() => alert("تم النسخ!"));
     }
 
     function exportBackup() {
