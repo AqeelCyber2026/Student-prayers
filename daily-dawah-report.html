@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <!-- تعريف ترميز الصفحة لضمان عرض الحروف العربية بصورة صحيحة. -->
+  <meta charset="UTF-8" />
+
+  <!-- ضبط مقياس العرض حتى تعمل الصفحة بصورة متجاوبة على الجوال والكمبيوتر. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- عنوان الصفحة الذي يظهر في تبويب المتصفح. -->
+  <title>التقرير اليومي لليوم الدعوي</title>
+
+  <!-- استيراد خط عربي واضح من Google Fonts مع وجود خط بديل عند عدم توفر الإنترنت. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* تعريف ألوان وهوية الصفحة في متغيرات ليسهل تعديل التصميم لاحقًا. */
+    :root {
+      --primary: #166534;
+      --primary-dark: #14532d;
+      --primary-light: #dcfce7;
+      --secondary: #ca8a04;
+      --secondary-light: #fef9c3;
+      --ink: #17211b;
+      --muted: #6b7b71;
+      --surface: #ffffff;
+      --surface-soft: #f8fbf8;
+      --page: #eef6ef;
+      --border: #dfe9e1;
+      --danger: #b91c1c;
+      --danger-light: #fee2e2;
+      --shadow: 0 18px 50px rgba(20, 83, 45, 0.09);
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 10px;
+    }
+
+    /* تهيئة قياس العناصر وإزالة الهوامش الافتراضية غير المرغوبة. */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* تنسيق جسم الصفحة بخلفية هادئة واتجاه كتابة عربي. */
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(202, 138, 4, 0.12), transparent 26rem),
+        radial-gradient(circle at 100% 18%, rgba(22, 101, 52, 0.09), transparent 30rem),
+        var(--page);
+      font-family: "Cairo", "Tahoma", sans-serif;
+      line-height: 1.7;
+    }
+
+    /* منع التمرير الأفقي الناتج عن عناصر كبيرة في الشاشات الصغيرة. */
+    body,
+    html {
+      overflow-x: hidden;
+    }
+
+    /* توحيد مظهر الأزرار والحقول مع اعتماد خط الصفحة. */
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    /* جعل جميع الأزرار قابلة للنقر بمؤشر واضح. */
+    button {
+      cursor: pointer;
+    }
+
+    /* الحاوية الرئيسية التي تضبط عرض المحتوى في الشاشات الكبيرة. */
+    .app-shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    /* رأس الصفحة الذي يجمع الشعار والعنوان وإحصائية التقارير. */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+      padding: 24px 28px;
+      color: #fff;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, #14532d, #166534 60%, #3f7d4a);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* زخرفة بسيطة في رأس الصفحة تضيف طابعًا بصريًا دون التأثير على المحتوى. */
+    .app-header::after {
+      content: "";
+      width: 230px;
+      height: 230px;
+      position: absolute;
+      left: -70px;
+      top: -120px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 50%;
+      box-shadow: 0 0 0 28px rgba(255, 255, 255, 0.04), 0 0 0 58px rgba(255, 255, 255, 0.035);
+      pointer-events: none;
+    }
+
+    /* مجموعة هوية التطبيق داخل الرأس. */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* مربع الأيقونة الذي يحمل رمز المسجد. */
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      flex: 0 0 58px;
+      color: var(--secondary-light);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 30px;
+    }
+
+    /* عنوان التطبيق الرئيسي. */
+    .brand h1 {
+      font-size: clamp(1.2rem, 2.4vw, 1.85rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    /* الوصف المختصر أسفل العنوان. */
+    .brand p {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.88rem;
+    }
+
+    /* الإحصائية الصغيرة التي تظهر عدد التقارير المحفوظة. */
+    .header-stat {
+      min-width: 145px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.17);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* الرقم داخل الإحصائية. */
+    .header-stat strong {
+      display: block;
+      font-size: 1.55rem;
+      line-height: 1.2;
+    }
+
+    /* النص التوضيحي أسفل الرقم. */
+    .header-stat span {
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 0.78rem;
+    }
+
+    /* شريط التنقل بين شاشة تعبئة التقرير وسجل التقارير. */
+    .view-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      margin-bottom: 22px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: 0 8px 24px rgba(20, 83, 45, 0.04);
+    }
+
+    /* أزرار التبويب الأساسية. */
+    .tab-button {
+      flex: 1;
+      padding: 11px 18px;
+      color: var(--muted);
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      font-weight: 700;
+      transition: 0.2s ease;
+    }
+
+    /* حالة التبويب النشط. */
+    .tab-button.active,
+    .tab-button:hover {
+      color: var(--primary-dark);
+      background: var(--primary-light);
+    }
+
+    /* إخفاء الواجهات غير النشطة. */
+    .view-panel.hidden {
+      display: none;
+    }
+
+    /* البطاقة البيضاء التي تحتوي كل جزء من التقرير. */
+    .card {
+      padding: 24px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(223, 233, 225, 0.9);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: var(--shadow);
+    }
+
+    /* عنوان البطاقة مع خط زخرفي جانبي. */
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* رمز عنوان البطاقة. */
+    .section-icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      color: var(--primary);
+      border-radius: 12px;
+      background: var(--primary-light);
+      font-size: 20px;
+    }
+
+    /* النص الرئيسي لعنوان البطاقة. */
+    .section-heading h2 {
+      color: var(--primary-dark);
+      font-size: 1.13rem;
+      font-weight: 800;
+    }
+
+    /* النص الثانوي أسفل بعض عناوين البطاقات. */
+    .section-heading p {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* شبكة الحقول العامة داخل نموذج التقرير. */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    /* شبكة الحقول ذات العمودين. */
+    .form-grid.two-columns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* عنصر الحقل الذي يمتد بعرض الشبكة عند الحاجة. */
+    .field.full-width {
+      grid-column: 1 / -1;
+    }
+
+    /* تسمية كل حقل. */
+    label.field-label {
+      display: block;
+      margin-bottom: 7px;
+      color: #33443a;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    /* الشكل العام لحقول الإدخال والاختيار والنصوص الطويلة. */
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fbfdfb;
+      outline: none;
+      transition: 0.2s ease;
+    }
+
+    /* ضبط ارتفاع وتباعد حقول الإدخال والاختيار. */
+    .input,
+    .select {
+      min-height: 46px;
+      padding: 9px 13px;
+    }
+
+    /* تنسيق حقل الملاحظات والمقترحات. */
+    .textarea {
+      min-height: 118px;
+      padding: 11px 13px;
+      resize: vertical;
+    }
+
+    /* إبراز الحقل عند التركيز عليه. */
+    .input:focus,
+    .select:focus,
+    .textarea:focus {
+      border-color: var(--primary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(22, 101, 52, 0.1);
+    }
+
+    /* جدول متابعة الصلوات. */
+    .prayer-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    /* تنسيق خلايا جدول الصلوات. */
+    .prayer-table {
+      width: 100%;
+      min-width: 600px;
+      border-collapse: collapse;
+    }
+
+    /* تنسيق رؤوس وخلايا جدول الصلوات. */
+    .prayer-table th,
+    .prayer-table td {
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      vertical-align: middle;
+    }
+
+    /* إزالة الخط السفلي من آخر صف. */
+    .prayer-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    /* تمييز صف العناوين. */
+    .prayer-table th {
+      color: var(--primary-dark);
+      background: #f3faf4;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    /* اسم الصلاة داخل الجدول. */
+    .prayer-name {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    /* مجموعة اختيار حالة الإمام والمؤذن. */
+    .check-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* زر الاختيار البصري لحالة المهمة. */
+    .choice {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 93px;
+      padding: 7px 10px;
+      color: #476052;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #fff;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    /* إخفاء زر radio الافتراضي واستبداله بعنصر مخصص. */
+    .choice input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* الدائرة المخصصة قبل نص الاختيار. */
+    .choice::before {
+      content: "";
+      width: 15px;
+      height: 15px;
+      flex: 0 0 15px;
+      border: 2px solid #b9cbbd;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    /* مظهر الاختيار عند تفعيله. */
+    .choice:has(input:checked) {
+      color: var(--primary-dark);
+      border-color: #9acba4;
+      background: var(--primary-light);
+      font-weight: 700;
+    }
+
+    /* الدائرة الداخلية للاختيار النشط. */
+    .choice:has(input:checked)::before {
+      border: 4px solid var(--primary);
+      box-shadow: inset 0 0 0 2px #fff;
+    }
+
+    /* شريط الإجابة السريعة للأسئلة بنعم أو لا. */
+    .choice-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* بطاقة خيار نعم أو لا الأكبر حجمًا. */
+    .choice-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 104px;
+      padding: 10px 14px;
+      color: #4d6255;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    /* إخفاء زر الراديو داخل البطاقة. */
+    .choice-card input {
+      accent-color: var(--primary);
+    }
+
+    /* تمييز بطاقة الخيار النشط. */
+    .choice-card:has(input:checked) {
+      color: var(--primary-dark);
+      border-color: #9acba4;
+      background: var(--primary-light);
+      font-weight: 700;
+    }
+
+    /* شبكة التقييم العام. */
+    .rating-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    /* بطاقة تقييم قابلة للاختيار. */
+    .rating-option {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 8px;
+      color: #53635a;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      cursor: pointer;
+      text-align: center;
+      font-size: 0.85rem;
+      transition: 0.2s ease;
+    }
+
+    /* إخفاء زر الراديو داخل بطاقة التقييم. */
+    .rating-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* تمييز التقييم المختار. */
+    .rating-option:has(input:checked) {
+      color: var(--primary-dark);
+      border-color: var(--secondary);
+      background: var(--secondary-light);
+      font-weight: 800;
+    }
+
+    /* شريط أزرار الإجراءات أسفل التقرير. */
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-start;
+      padding: 18px 0 2px;
+    }
+
+    /* الشكل الأساسي لكل أزرار الإجراءات. */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 9px 17px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      font-weight: 800;
+      transition: 0.2s ease;
+    }
+
+    /* تأثير التحويم العام على الأزرار. */
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(0.98);
+    }
+
+    /* زر الحفظ الأساسي. */
+    .btn-primary {
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 7px 15px rgba(22, 101, 52, 0.16);
+    }
+
+    /* زر واتساب. */
+    .btn-whatsapp {
+      color: #fff;
+      background: #128c7e;
+      box-shadow: 0 7px 15px rgba(18, 140, 126, 0.16);
+    }
+
+    /* زر الطباعة والإجراء الثانوي. */
+    .btn-secondary {
+      color: var(--primary-dark);
+      border-color: var(--border);
+      background: #fff;
+    }
+
+    /* زر المسح أو الحذف. */
+    .btn-danger {
+      color: var(--danger);
+      border-color: #fecaca;
+      background: var(--danger-light);
+    }
+
+    /* رسالة حالة الحفظ أسفل الأزرار. */
+    .save-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 46px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    /* رأس سجل التقارير الذي يجمع العنوان والفلاتر. */
+    .history-toolbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* حاوية فلاتر سجل التقارير. */
+    .history-filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    /* تصغير حقول الفلاتر لتناسب شريط السجل. */
+    .filter-field {
+      min-width: 145px;
+    }
+
+    /* بطاقات الملخص الأسبوعي أو العام. */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    /* بطاقة رقمية واحدة في الملخص. */
+    .summary-card {
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-soft);
+    }
+
+    /* اسم المؤشر في بطاقة الملخص. */
+    .summary-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.77rem;
+    }
+
+    /* قيمة المؤشر في بطاقة الملخص. */
+    .summary-card strong {
+      display: block;
+      margin-top: 4px;
+      color: var(--primary-dark);
+      font-size: 1.3rem;
+    }
+
+    /* قائمة التقارير المحفوظة. */
+    .reports-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    /* بطاقة تقرير محفوظ واحد. */
+    .report-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: #fff;
+    }
+
+    /* معلومات التقرير داخل البطاقة. */
+    .report-info {
+      min-width: 0;
+    }
+
+    /* سطر العنوان في بطاقة التقرير. */
+    .report-info h3 {
+      color: var(--primary-dark);
+      font-size: 0.98rem;
+      font-weight: 800;
+    }
+
+    /* البيانات الوصفية للتقرير. */
+    .report-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.77rem;
+    }
+
+    /* شارة التقييم داخل بطاقة التقرير. */
+    .rating-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      color: #805d00;
+      border-radius: 999px;
+      background: var(--secondary-light);
+      font-weight: 700;
+    }
+
+    /* أزرار الإجراءات الخاصة بكل تقرير محفوظ. */
+    .report-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      flex: 0 0 auto;
+    }
+
+    /* تصغير أزرار بطاقات السجل. */
+    .report-actions .btn {
+      min-height: 36px;
+      padding: 5px 10px;
+      border-radius: 9px;
+      font-size: 0.75rem;
+    }
+
+    /* الرسالة التي تظهر عند عدم وجود تقارير. */
+    .empty-state {
+      padding: 34px 18px;
+      color: var(--muted);
+      border: 1px dashed #bfd2c3;
+      border-radius: 15px;
+      background: #fbfefb;
+      text-align: center;
+    }
+
+    /* تذييل الصفحة. */
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.77rem;
+      text-align: center;
+    }
+
+    /* إخفاء العناصر المخصصة للطباعة أثناء العرض العادي. */
+    .print-only {
+      display: none;
+    }
+
+    /* تحسين عرض الصفحة على الشاشات المتوسطة. */
+    @media (max-width: 900px) {
+      .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* تحسين عرض الصفحة على شاشات الجوال. */
+    @media (max-width: 640px) {
+      .app-shell {
+        width: min(100% - 18px, 560px);
+        padding-top: 10px;
+      }
+
+      .app-header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 20px;
+        border-radius: 18px;
+      }
+
+      .header-stat {
+        width: 100%;
+      }
+
+      .card {
+        padding: 17px;
+        border-radius: 18px;
+      }
+
+      .form-grid,
+      .form-grid.two-columns,
+      .rating-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .history-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .history-filters,
+      .filter-field {
+        width: 100%;
+      }
+
+      .filter-field {
+        min-width: 0;
+      }
+
+      .report-item {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .report-actions .btn {
+        flex: 1;
+      }
+
+      .actions .btn {
+        flex: 1 1 145px;
+      }
+    }
+
+    /* قواعد الطباعة التي تعرض التقرير الحالي فقط وتخفي عناصر التحكم. */
+    @media print {
+      body {
+        color: #000;
+        background: #fff;
+      }
+
+      .app-shell {
+        width: 100%;
+        padding: 0;
+      }
+
+      .app-header,
+      .view-tabs,
+      .actions,
+      .footer-note,
+      .history-toolbar,
+      .summary-grid,
+      #historyView,
+      .save-status {
+        display: none !important;
+      }
+
+      #formView {
+        display: block !important;
+      }
+
+      .card {
+        padding: 12px 0;
+        margin-bottom: 8px;
+        border: 0;
+        box-shadow: none;
+      }
+
+      .section-heading {
+        border-bottom-color: #bbb;
+      }
+
+      .input,
+      .select,
+      .textarea {
+        border-color: #aaa;
+        background: #fff;
+      }
+
+      .choice,
+      .choice-card,
+      .rating-option {
+        border-color: #aaa;
+      }
+
+      .print-only {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- الحاوية الرئيسية التي تضم واجهتي النموذج والسجل. -->
+  <main class="app-shell">
+    <!-- رأس التطبيق الذي يعرض هوية الصفحة وعدد التقارير المحفوظة. -->
+    <header class="app-header">
+      <!-- مجموعة الشعار والعنوان. -->
+      <div class="brand">
+        <!-- رمز بصري للمسجد. -->
+        <div class="brand-mark" aria-hidden="true">🕌</div>
+
+        <!-- عنوان ووصف الصفحة. -->
+        <div>
+          <h1>التقرير اليومي لليوم الدعوي</h1>
+          <p>متابعة منظمة للصلوات والخواطر والمهام الدعوية</p>
+        </div>
+      </div>
+
+      <!-- إحصائية سريعة لعدد التقارير المخزنة على الجهاز. -->
+      <div class="header-stat">
+        <strong id="reportsCount">0</strong>
+        <span>تقرير محفوظ محليًا</span>
+      </div>
+    </header>
+
+    <!-- أزرار التنقل داخل الصفحة الواحدة. -->
+    <nav class="view-tabs" aria-label="التنقل داخل الصفحة">
+      <!-- زر فتح نموذج تقرير جديد. -->
+      <button class="tab-button active" type="button" data-view="formView">تقرير جديد</button>
+
+      <!-- زر فتح سجل التقارير والمراجعة. -->
+      <button class="tab-button" type="button" data-view="historyView">مراجعة التقارير</button>
+    </nav>
+
+    <!-- واجهة تعبئة التقرير اليومية. -->
+    <section id="formView" class="view-panel">
+      <!-- نموذج التقرير الرئيسي. -->
+      <form id="reportForm" novalidate>
+        <!-- البطاقة الأولى: البيانات الأساسية للتقرير. -->
+        <section class="card">
+          <!-- عنوان قسم البيانات الأساسية. -->
+          <div class="section-heading">
+            <!-- أيقونة القسم. -->
+            <div class="section-icon" aria-hidden="true">📋</div>
+
+            <!-- عنوان ووصف القسم. -->
+            <div>
+              <h2>البيانات الأساسية</h2>
+              <p>أدخل معلومات اليوم والأسرة والمسؤول الدعوي</p>
+            </div>
+          </div>
+
+          <!-- شبكة الحقول الأساسية. -->
+          <div class="form-grid">
+            <!-- حقل اسم اليوم. -->
+            <div class="field">
+              <label class="field-label" for="dayName">اليوم</label>
+              <input class="input" id="dayName" name="dayName" type="text" placeholder="مثال: الأحد" />
+            </div>
+
+            <!-- حقل التاريخ. -->
+            <div class="field">
+              <label class="field-label" for="reportDate">التاريخ</label>
+              <input class="input" id="reportDate" name="reportDate" type="date" required />
+            </div>
+
+            <!-- حقل الأسرة المسؤولة. -->
+            <div class="field">
+              <label class="field-label" for="family">الأسرة المسؤولة</label>
+              <input class="input" id="family" name="family" type="text" placeholder="اسم الأسرة" required />
+            </div>
+
+            <!-- حقل اسم المسؤول الدعوي. -->
+            <div class="field">
+              <label class="field-label" for="responsible">اسم المسؤول الدعوي</label>
+              <input class="input" id="responsible" name="responsible" type="text" placeholder="الاسم الكامل" required />
+            </div>
+          </div>
+        </section>
+
+        <!-- البطاقة الثانية: متابعة الصلوات. -->
+        <section class="card">
+          <!-- عنوان قسم الصلوات. -->
+          <div class="section-heading">
+            <!-- أيقونة القسم. -->
+            <div class="section-icon" aria-hidden="true">🕌</div>
+
+            <!-- عنوان ووصف القسم. -->
+            <div>
+              <h2>أولًا: متابعة الصلوات</h2>
+              <p>حدد حالة الإمام والمؤذن لكل صلاة</p>
+            </div>
+          </div>
+
+          <!-- جدول متابعة الصلوات. -->
+          <div class="prayer-table-wrap">
+            <table class="prayer-table">
+              <!-- عناوين أعمدة جدول الصلوات. -->
+              <thead>
+                <tr>
+                  <th>الصلاة</th>
+                  <th>الإمام</th>
+                  <th>المؤذن</th>
+                </tr>
+              </thead>
+
+              <!-- صفوف الصلوات التي ستتم قراءتها وحفظها برمجيًا. -->
+              <tbody>
+                <!-- صف صلاة الفجر. -->
+                <tr>
+                  <td class="prayer-name">صلاة الفجر</td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="fajrImam" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="fajrImam" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="fajrMuezzin" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="fajrMuezzin" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- صف صلاة الظهر. -->
+                <tr>
+                  <td class="prayer-name">صلاة الظهر</td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="dhuhrImam" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="dhuhrImam" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="dhuhrMuezzin" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="dhuhrMuezzin" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- صف صلاة العصر. -->
+                <tr>
+                  <td class="prayer-name">صلاة العصر</td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="asrImam" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="asrImam" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="asrMuezzin" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="asrMuezzin" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- صف صلاة المغرب. -->
+                <tr>
+                  <td class="prayer-name">صلاة المغرب</td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="maghribImam" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="maghribImam" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="maghribMuezzin" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="maghribMuezzin" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- صف صلاة العشاء. -->
+                <tr>
+                  <td class="prayer-name">صلاة العشاء</td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="ishaImam" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="ishaImam" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="check-group">
+                      <label class="choice"><input type="radio" name="ishaMuezzin" value="تم" checked />تم ✅</label>
+                      <label class="choice"><input type="radio" name="ishaMuezzin" value="لم يتم" />لم يتم</label>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- سؤال الصلوات التي لم يتوفر لها إمام أو مؤذن. -->
+          <div class="field" style="margin-top: 18px;">
+            <label class="field-label">هل وُجدت أي صلاة بدون إمام أو مؤذن؟</label>
+            <div class="choice-row">
+              <label class="choice-card"><input type="radio" name="missingPrayer" value="لا" checked />لا</label>
+              <label class="choice-card"><input type="radio" name="missingPrayer" value="نعم" />نعم</label>
+            </div>
+          </div>
+
+          <!-- تفاصيل الصلاة عند اختيار نعم. -->
+          <div class="field" style="margin-top: 14px;">
+            <label class="field-label" for="missingPrayerDetails">تفاصيل الصلاة إن وُجدت</label>
+            <input class="input" id="missingPrayerDetails" name="missingPrayerDetails" type="text" placeholder="اذكر الصلاة وسبب عدم توفر الإمام أو المؤذن" />
+          </div>
+        </section>
+
+        <!-- البطاقة الثالثة: الخواطر الدعوية. -->
+        <section class="card">
+          <!-- عنوان قسم الخواطر. -->
+          <div class="section-heading">
+            <!-- أيقونة القسم. -->
+            <div class="section-icon" aria-hidden="true">🎙️</div>
+
+            <!-- عنوان ووصف القسم. -->
+            <div>
+              <h2>ثانيًا: الخواطر الدعوية</h2>
+              <p>وثّق تنفيذ الخواطر وأسماء مقدميها</p>
+            </div>
+          </div>
+
+          <!-- حقول حالة الخواطر وأسماء مقدميها. -->
+          <div class="form-grid two-columns">
+            <!-- حالة خاطرة الفجر. -->
+            <div class="field">
+              <label class="field-label">خاطرة الفجر</label>
+              <div class="choice-row">
+                <label class="choice-card"><input type="radio" name="fajrTalk" value="تمت" checked />تمت</label>
+                <label class="choice-card"><input type="radio" name="fajrTalk" value="لم تتم" />لم تتم</label>
+              </div>
+            </div>
+
+            <!-- حالة خاطرة العصر. -->
+            <div class="field">
+              <label class="field-label">خاطرة العصر</label>
+              <div class="choice-row">
+                <label class="choice-card"><input type="radio" name="asrTalk" value="تمت" checked />تمت</label>
+                <label class="choice-card"><input type="radio" name="asrTalk" value="لم تتم" />لم تتم</label>
+              </div>
+            </div>
+
+            <!-- اسم مقدم خاطرة الفجر. -->
+            <div class="field">
+              <label class="field-label" for="fajrSpeaker">مقدم خاطرة الفجر</label>
+              <input class="input" id="fajrSpeaker" name="fajrSpeaker" type="text" placeholder="الاسم" />
+            </div>
+
+            <!-- اسم مقدم خاطرة العصر. -->
+            <div class="field">
+              <label class="field-label" for="asrSpeaker">مقدم خاطرة العصر</label>
+              <input class="input" id="asrSpeaker" name="asrSpeaker" type="text" placeholder="الاسم" />
+            </div>
+          </div>
+
+          <!-- سؤال غياب أو اعتذار أحد المكلفين. -->
+          <div class="field" style="margin-top: 18px;">
+            <label class="field-label">هل حصل غياب أو اعتذار من أحد المكلفين؟</label>
+            <div class="choice-row">
+              <label class="choice-card"><input type="radio" name="absence" value="لا" checked />لا</label>
+              <label class="choice-card"><input type="radio" name="absence" value="نعم" />نعم</label>
+            </div>
+          </div>
+
+          <!-- تفاصيل الغياب أو الاعتذار. -->
+          <div class="field" style="margin-top: 14px;">
+            <label class="field-label" for="absenceDetails">تفاصيل الغياب أو الاعتذار</label>
+            <input class="input" id="absenceDetails" name="absenceDetails" type="text" placeholder="الاسم والسبب إن وُجد" />
+          </div>
+        </section>
+
+        <!-- البطاقة الرابعة: المتابعة والتعاون. -->
+        <section class="card">
+          <!-- عنوان قسم المتابعة والتعاون. -->
+          <div class="section-heading">
+            <!-- أيقونة القسم. -->
+            <div class="section-icon" aria-hidden="true">🤝</div>
+
+            <!-- عنوان ووصف القسم. -->
+            <div>
+              <h2>ثالثًا: المتابعة والتعاون</h2>
+              <p>سجّل التواصل مع المسؤولين وأي مساعدة تم تقديمها</p>
+            </div>
+          </div>
+
+          <!-- حقول المتابعة والمساعدة. -->
+          <div class="form-grid two-columns">
+            <!-- سؤال التواصل مع المسؤولين. -->
+            <div class="field">
+              <label class="field-label">هل تم التواصل مع المسؤولين ومتابعة مهامهم؟</label>
+              <div class="choice-row">
+                <label class="choice-card"><input type="radio" name="contacted" value="نعم" checked />نعم</label>
+                <label class="choice-card"><input type="radio" name="contacted" value="لا" />لا</label>
+              </div>
+            </div>
+
+            <!-- سؤال احتياج أحد المسؤولين للمساعدة. -->
+            <div class="field">
+              <label class="field-label">هل احتاج أحد المسؤولين إلى مساعدة؟</label>
+              <div class="choice-row">
+                <label class="choice-card"><input type="radio" name="helpNeeded" value="لا" checked />لا</label>
+                <label class="choice-card"><input type="radio" name="helpNeeded" value="نعم" />نعم</label>
+              </div>
+            </div>
+
+            <!-- تفاصيل المساعدة المقدمة. -->
+            <div class="field full-width">
+              <label class="field-label" for="helpDetails">تمت المساعدة في</label>
+              <input class="input" id="helpDetails" name="helpDetails" type="text" placeholder="اذكر نوع المساعدة أو المهمة" />
+            </div>
+          </div>
+        </section>
+
+        <!-- البطاقة الخامسة: الملاحظات والمقترحات. -->
+        <section class="card">
+          <!-- عنوان قسم الملاحظات والمقترحات. -->
+          <div class="section-heading">
+            <!-- أيقونة القسم. -->
+            <div class="section-icon" aria-hidden="true">📝</div>
+
+            <!-- عنوان ووصف القسم. -->
+            <div>
+              <h2>رابعًا وخامسًا: الملاحظات والمقترحات</h2>
+              <p>أضف ما يساعد على تحسين العمل الدعوي</p>
+            </div>
+          </div>
+
+          <!-- حقلا الملاحظات والمقترحات. -->
+          <div class="form-grid two-columns">
+            <!-- حقل أبرز الملاحظات. -->
+            <div class="field">
+              <label class="field-label" for="notes">أبرز الملاحظات</label>
+              <textarea class="textarea" id="notes" name="notes" placeholder="اكتب أبرز الملاحظات..." ></textarea>
+            </div>
+
+            <!-- حقل المقترحات. -->
+            <div class="field">
+              <label class="field-label" for="suggestions">المقترحات</label>
+              <textarea class="textarea" id="suggestions" name="suggestions" placeholder="اكتب المقترحات..." ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- البطاقة السادسة: التقييم والتوقيع. -->
+        <section class="card">
+          <!-- عنوان قسم التقييم. -->
+          <div class="section-heading">
+            <!-- أيقونة القسم. -->
+            <div class="section-icon" aria-hidden="true">⭐</div>
+
+            <!-- عنوان ووصف القسم. -->
+            <div>
+              <h2>التقييم العام لليوم</h2>
+              <p>اختر التقييم المناسب وأكمل بيانات الاعتماد</p>
+            </div>
+          </div>
+
+          <!-- خيارات التقييم العام. -->
+          <div class="rating-grid">
+            <!-- خيار ممتاز. -->
+            <label class="rating-option"><input type="radio" name="rating" value="ممتاز ⭐" checked />ممتاز ⭐</label>
+
+            <!-- خيار جيد جدًا. -->
+            <label class="rating-option"><input type="radio" name="rating" value="جيد جدًا" />جيد جدًا</label>
+
+            <!-- خيار جيد. -->
+            <label class="rating-option"><input type="radio" name="rating" value="جيد" />جيد</label>
+
+            <!-- خيار يحتاج إلى تحسين. -->
+            <label class="rating-option"><input type="radio" name="rating" value="يحتاج إلى تحسين" />يحتاج إلى تحسين</label>
+          </div>
+
+          <!-- حقلا المسؤول والتوقيع. -->
+          <div class="form-grid two-columns" style="margin-top: 18px;">
+            <!-- اسم المسؤول الدعوي للتوقيع النهائي. -->
+            <div class="field">
+              <label class="field-label" for="signer">اسم المسؤول الدعوي</label>
+              <input class="input" id="signer" name="signer" type="text" placeholder="الاسم" />
+            </div>
+
+            <!-- التوقيع النصي. -->
+            <div class="field">
+              <label class="field-label" for="signature">التوقيع</label>
+              <input class="input" id="signature" name="signature" type="text" placeholder="التوقيع" />
+            </div>
+          </div>
+
+          <!-- أزرار حفظ التقرير ومشاركته وطباعته. -->
+          <div class="actions">
+            <!-- زر حفظ التقرير في التخزين المحلي. -->
+            <button class="btn btn-primary" type="submit">💾 حفظ التقرير</button>
+
+            <!-- زر إرسال محتوى التقرير عبر واتساب. -->
+            <button class="btn btn-whatsapp" type="button" id="whatsappButton">🟢 إرسال عبر واتساب</button>
+
+            <!-- زر طباعة التقرير الحالي. -->
+            <button class="btn btn-secondary" type="button" id="printButton">🖨️ طباعة</button>
+
+            <!-- زر بدء تقرير فارغ جديد. -->
+            <button class="btn btn-danger" type="button" id="resetButton">↺ تقرير جديد</button>
+
+            <!-- مؤشر آخر عملية حفظ. -->
+            <span class="save-status" id="saveStatus" aria-live="polite">سيتم حفظ التقرير على هذا الجهاز فقط.</span>
+          </div>
+        </section>
+      </form>
+    </section>
+
+    <!-- واجهة مراجعة التقارير المحفوظة. -->
+    <section id="historyView" class="view-panel hidden">
+      <!-- بطاقة سجل التقارير والفلاتر. -->
+      <section class="card">
+        <!-- شريط عنوان السجل والفلاتر. -->
+        <div class="history-toolbar">
+          <!-- عنوان ووصف سجل التقارير. -->
+          <div class="section-heading" style="padding-bottom: 0; margin-bottom: 0; border-bottom: 0;">
+            <!-- أيقونة السجل. -->
+            <div class="section-icon" aria-hidden="true">🗂️</div>
+
+            <!-- عنوان ووصف السجل. -->
+            <div>
+              <h2>مراجعة التقارير</h2>
+              <p>راجع تقارير اليوم أو الأسبوع من التخزين المحلي</p>
+            </div>
+          </div>
+
+          <!-- فلاتر سجل التقارير. -->
+          <div class="history-filters">
+            <!-- فلتر نوع المراجعة. -->
+            <div class="filter-field">
+              <label class="field-label" for="periodFilter">الفترة</label>
+              <select class="select" id="periodFilter">
+                <option value="day">اليوم</option>
+                <option value="week">هذا الأسبوع</option>
+                <option value="all">كل التقارير</option>
+              </select>
+            </div>
+
+            <!-- تاريخ المراجعة الذي يستخدم لليوم أو الأسبوع. -->
+            <div class="filter-field">
+              <label class="field-label" for="reviewDate">تاريخ المراجعة</label>
+              <input class="input" id="reviewDate" type="date" />
+            </div>
+          </div>
+        </div>
+
+        <!-- بطاقات الملخص الديناميكي. -->
+        <div class="summary-grid" id="summaryGrid"></div>
+
+        <!-- التقارير المطابقة للفلاتر. -->
+        <div class="reports-list" id="reportsList"></div>
+      </section>
+
+      <!-- زر حذف جميع التقارير المحفوظة. -->
+      <section class="card" style="padding: 17px 20px;">
+        <button class="btn btn-danger" type="button" id="clearAllButton">🗑️ حذف جميع التقارير المحفوظة</button>
+      </section>
+    </section>
+
+    <!-- تذييل توضيحي. -->
+    <p class="footer-note">البيانات محفوظة في التخزين المحلي للمتصفح، ولن تُرسل إلى أي خادم.</p>
+  </main>
+
+  <script>
+    /* مفتاح التخزين المحلي الذي تحفظ تحته جميع التقارير. */
+    const STORAGE_KEY = "dailyDawahReports";
+
+    /* مفتاح التخزين المحلي لمسودة التقرير الجاري تعبئته. */
+    const DRAFT_KEY = "dailyDawahDraft";
+
+    /* أسماء الصلوات المستخدمة في بناء نص واتساب وملخص التقرير. */
+    const PRAYERS = [
+      { label: "الفجر", imam: "fajrImam", muezzin: "fajrMuezzin" },
+      { label: "الظهر", imam: "dhuhrImam", muezzin: "dhuhrMuezzin" },
+      { label: "العصر", imam: "asrImam", muezzin: "asrMuezzin" },
+      { label: "المغرب", imam: "maghribImam", muezzin: "maghribMuezzin" },
+      { label: "العشاء", imam: "ishaImam", muezzin: "ishaMuezzin" }
+    ];
+
+    /* الحصول على عناصر الصفحة الأساسية لاستخدامها في الوظائف التفاعلية. */
+    const form = document.getElementById("reportForm");
+    const reportsCount = document.getElementById("reportsCount");
+    const saveStatus = document.getElementById("saveStatus");
+    const reportsList = document.getElementById("reportsList");
+    const summaryGrid = document.getElementById("summaryGrid");
+    const periodFilter = document.getElementById("periodFilter");
+    const reviewDate = document.getElementById("reviewDate");
+
+    /* إعادة التاريخ إلى صيغة YYYY-MM-DD التي يقبلها حقل التاريخ. */
+    function formatDateForInput(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    /* إنشاء تاريخ اليوم المحلي دون التأثر بفارق التوقيت العالمي. */
+    function todayString() {
+      return formatDateForInput(new Date());
+    }
+
+    /* تحويل تاريخ YYYY-MM-DD إلى نص عربي قابل للعرض. */
+    function formatArabicDate(dateString) {
+      if (!dateString) return "غير محدد";
+      const date = new Date(`${dateString}T12:00:00`);
+      return new Intl.DateTimeFormat("ar-SA", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      }).format(date);
+    }
+
+    /* قراءة التقارير من التخزين المحلي مع حماية الصفحة من البيانات التالفة. */
+    function getReports() {
+      try {
+        const reports = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        return Array.isArray(reports) ? reports : [];
+      } catch (error) {
+        console.error("تعذر قراءة التقارير المحفوظة", error);
+        return [];
+      }
+    }
+
+    /* حفظ مصفوفة التقارير في التخزين المحلي وتحديث العداد الظاهر. */
+    function setReports(reports) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+      updateReportsCount();
+    }
+
+    /* تحديث عدد التقارير المحفوظة في رأس الصفحة. */
+    function updateReportsCount() {
+      reportsCount.textContent = getReports().length;
+    }
+
+    /* الحصول على قيمة حقل نصي أو قيمة radio محددة من النموذج. */
+    function getFieldValue(name) {
+      const field = form.elements[name];
+      if (!field) return "";
+      if (field instanceof RadioNodeList) return field.value || "";
+      return field.value || "";
+    }
+
+    /* جمع كل بيانات النموذج في كائن واحد قابل للتخزين والمشاركة. */
+    function collectFormData() {
+      const data = {};
+      const formData = new FormData(form);
+      formData.forEach((value, key) => {
+        data[key] = value;
+      });
+
+      return {
+        ...data,
+        savedAt: new Date().toISOString()
+      };
+    }
+
+    /* تعبئة الحقول من كائن تقرير محفوظ أو من مسودة سابقة. */
+    function fillForm(data) {
+      if (!data) return;
+
+      Object.entries(data).forEach(([key, value]) => {
+        const field = form.elements[key];
+        if (!field) return;
+
+        if (field instanceof RadioNodeList) {
+          const option = Array.from(field).find((input) => input.value === value);
+          if (option) option.checked = true;
+          return;
+        }
+
+        field.value = value ?? "";
+      });
+
+      saveDraft();
+    }
+
+    /* حذف قيمة رقم التقرير من الكائن قبل تعبئة النموذج. */
+    function loadReportIntoForm(reportId) {
+      const report = getReports().find((item) => item.id === reportId);
+      if (!report) return;
+
+      fillForm(report.data);
+      form.dataset.editingId = report.id;
+      switchView("formView");
+      saveStatus.textContent = "تم فتح التقرير للمراجعة والتعديل.";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    /* حفظ نسخة تلقائية من البيانات الحالية كمسودة غير نهائية. */
+    function saveDraft() {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(collectFormData()));
+      } catch (error) {
+        console.warn("تعذر حفظ المسودة المحلية", error);
+      }
+    }
+
+    /* تحميل المسودة تلقائيًا عند فتح الصفحة إذا كانت موجودة. */
+    function loadDraft() {
+      try {
+        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+        if (draft) fillForm(draft);
+      } catch (error) {
+        console.warn("تعذر تحميل المسودة المحلية", error);
+      }
+    }
+
+    /* مسح المسودة المؤقتة بعد الحفظ النهائي. */
+    function clearDraft() {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+
+    /* إعادة تعيين النموذج مع وضع تاريخ اليوم وقيم الخيارات الافتراضية. */
+    function resetFormToNew() {
+      form.reset();
+      document.getElementById("reportDate").value = todayString();
+      document.getElementById("reviewDate").value = todayString();
+      saveDraft();
+      saveStatus.textContent = "تم تجهيز نموذج تقرير جديد.";
+    }
+
+    /* إرجاع اسم اليوم العربي تلقائيًا عند اختيار التاريخ. */
+    function updateDayName() {
+      const dateValue = document.getElementById("reportDate").value;
+      if (!dateValue) return;
+      const date = new Date(`${dateValue}T12:00:00`);
+      document.getElementById("dayName").value = new Intl.DateTimeFormat("ar-SA", { weekday: "long" }).format(date);
+    }
+
+    /* إظهار واجهة النموذج أو واجهة السجل مع تحديث أزرار التبويب. */
+    function switchView(viewId) {
+      document.querySelectorAll(".view-panel").forEach((panel) => {
+        panel.classList.toggle("hidden", panel.id !== viewId);
+      });
+
+      document.querySelectorAll(".tab-button").forEach((button) => {
+        button.classList.toggle("active", button.dataset.view === viewId);
+      });
+
+      if (viewId === "historyView") renderHistory();
+    }
+
+    /* معرفة بداية الأسبوع الذي يحتوي على تاريخ معين، مع اعتبار الأحد بداية الأسبوع. */
+    function getWeekStart(dateString) {
+      const date = new Date(`${dateString}T12:00:00`);
+      const day = date.getDay();
+      date.setDate(date.getDate() - day);
+      return formatDateForInput(date);
+    }
+
+    /* معرفة نهاية الأسبوع الذي يحتوي على تاريخ معين. */
+    function getWeekEnd(dateString) {
+      const start = new Date(`${getWeekStart(dateString)}T12:00:00`);
+      start.setDate(start.getDate() + 6);
+      return formatDateForInput(start);
+    }
+
+    /* اختيار التقارير المطابقة لنوع الفترة وتاريخ المراجعة. */
+    function filterReports(reports) {
+      const selectedDate = reviewDate.value || todayString();
+      const period = periodFilter.value;
+
+      if (period === "all") return reports;
+      if (period === "day") return reports.filter((report) => report.data.reportDate === selectedDate);
+
+      const weekStart = getWeekStart(selectedDate);
+      const weekEnd = getWeekEnd(selectedDate);
+      return reports.filter((report) => report.data.reportDate >= weekStart && report.data.reportDate <= weekEnd);
+    }
+
+    /* إنشاء بطاقات الإحصائيات الخاصة بالفترة المحددة. */
+    function renderSummary(reports) {
+      const completedReports = reports.filter((report) => report.data.rating === "ممتاز ⭐" || report.data.rating === "جيد جدًا").length;
+      const contactedReports = reports.filter((report) => report.data.contacted === "نعم").length;
+      const totalReports = reports.length;
+      const averageLabel = totalReports ? mostCommonRating(reports) : "—";
+
+      summaryGrid.innerHTML = `
+        <!-- بطاقة عدد التقارير في الفترة المحددة. -->
+        <div class="summary-card"><span>عدد التقارير</span><strong>${totalReports}</strong></div>
+        <!-- بطاقة التقارير ذات التقييم المرتفع. -->
+        <div class="summary-card"><span>تقييم ممتاز أو جيد جدًا</span><strong>${completedReports}</strong></div>
+        <!-- بطاقة عدد أيام المتابعة والتواصل. -->
+        <div class="summary-card"><span>تمت فيها المتابعة</span><strong>${contactedReports}</strong></div>
+        <!-- بطاقة التقييم الأكثر تكرارًا. -->
+        <div class="summary-card"><span>التقييم الأكثر تكرارًا</span><strong>${escapeHtml(averageLabel)}</strong></div>
+      `;
+    }
+
+    /* حساب التقييم الأكثر تكرارًا في مجموعة التقارير. */
+    function mostCommonRating(reports) {
+      const counts = {};
+      reports.forEach((report) => {
+        const rating = report.data.rating || "غير محدد";
+        counts[rating] = (counts[rating] || 0) + 1;
+      });
+
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+    }
+
+    /* حماية النصوص القادمة من المدخلات قبل وضعها داخل HTML. */
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    /* رسم قائمة التقارير المحفوظة في واجهة المراجعة. */
+    function renderHistory() {
+      const matchingReports = filterReports(getReports()).sort((a, b) => {
+        return String(b.data.reportDate || "").localeCompare(String(a.data.reportDate || ""));
+      });
+
+      renderSummary(matchingReports);
+
+      if (!matchingReports.length) {
+        reportsList.innerHTML = `
+          <!-- حالة عدم وجود تقارير مطابقة للفلاتر. -->
+          <div class="empty-state">لا توجد تقارير محفوظة في الفترة المحددة. ابدأ بحفظ تقرير جديد ليظهر هنا.</div>
+        `;
+        return;
+      }
+
+      reportsList.innerHTML = matchingReports.map((report) => `
+        <!-- بطاقة تقرير محفوظ واحد. -->
+        <article class="report-item">
+          <!-- معلومات التقرير الأساسية. -->
+          <div class="report-info">
+            <h3>${escapeHtml(report.data.family || "أسرة غير محددة")} — ${escapeHtml(report.data.responsible || "مسؤول غير محدد")}</h3>
+            <div class="report-meta">
+              <span>📅 ${escapeHtml(formatArabicDate(report.data.reportDate))}</span>
+              <span>🗓️ ${escapeHtml(report.data.dayName || "")}</span>
+              <span class="rating-badge">${escapeHtml(report.data.rating || "بدون تقييم")}</span>
+            </div>
+          </div>
+
+          <!-- أزرار فتح ومشاركة وحذف التقرير. -->
+          <div class="report-actions">
+            <button class="btn btn-secondary" type="button" data-action="open" data-id="${report.id}">فتح</button>
+            <button class="btn btn-whatsapp" type="button" data-action="whatsapp" data-id="${report.id}">واتساب</button>
+            <button class="btn btn-danger" type="button" data-action="delete" data-id="${report.id}">حذف</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    /* بناء نص منسق للتقرير لاستخدامه في مشاركة واتساب. */
+    function buildWhatsAppText(data) {
+      const prayerLines = PRAYERS.map((prayer) => {
+        return `- صلاة ${prayer.label}: الإمام ${getDataValue(data, prayer.imam)} / المؤذن ${getDataValue(data, prayer.muezzin)}`;
+      }).join("\n");
+
+      return [
+        "📋 *التقرير اليومي لليوم الدعوي*",
+        "",
+        `*اليوم:* ${getDataValue(data, "dayName")}`,
+        `*التاريخ:* ${formatArabicDate(getDataValue(data, "reportDate"))}`,
+        `*الأسرة المسؤولة:* ${getDataValue(data, "family")}`,
+        `*اسم المسؤول الدعوي:* ${getDataValue(data, "responsible")}`,
+        "",
+        "🕌 *أولًا: متابعة الصلوات*",
+        prayerLines,
+        `هل وُجدت صلاة بدون إمام أو مؤذن؟ ${getDataValue(data, "missingPrayer")}`,
+        `التفاصيل: ${getDataValue(data, "missingPrayerDetails") || "لا يوجد"}`,
+        "",
+        "🎙️ *ثانيًا: الخواطر الدعوية*",
+        `- خاطرة الفجر: ${getDataValue(data, "fajrTalk")} — المقدم: ${getDataValue(data, "fajrSpeaker") || "غير محدد"}`,
+        `- خاطرة العصر: ${getDataValue(data, "asrTalk")} — المقدم: ${getDataValue(data, "asrSpeaker") || "غير محدد"}`,
+        `- غياب أو اعتذار: ${getDataValue(data, "absence")}`,
+        `- التفاصيل: ${getDataValue(data, "absenceDetails") || "لا يوجد"}`,
+        "",
+        "🤝 *ثالثًا: المتابعة والتعاون*",
+        `- تم التواصل مع المسؤولين: ${getDataValue(data, "contacted")}`,
+        `- احتاج أحد المسؤولين إلى مساعدة: ${getDataValue(data, "helpNeeded")}`,
+        `- تمت المساعدة في: ${getDataValue(data, "helpDetails") || "لا يوجد"}`,
+        "",
+        "📝 *رابعًا: أبرز الملاحظات*",
+        getDataValue(data, "notes") || "لا توجد ملاحظات",
+        "",
+        "💡 *خامسًا: المقترحات*",
+        getDataValue(data, "suggestions") || "لا توجد مقترحات",
+        "",
+        `⭐ *التقييم العام:* ${getDataValue(data, "rating")}`,
+        `*المسؤول:* ${getDataValue(data, "signer") || getDataValue(data, "responsible")}`,
+        `*التوقيع:* ${getDataValue(data, "signature") || "غير محدد"}`
+      ].join("\n");
+    }
+
+    /* قراءة قيمة من كائن التقرير مع نص بديل عند عدم وجودها. */
+    function getDataValue(data, key) {
+      return String(data?.[key] ?? "غير محدد");
+    }
+
+    /* فتح واتساب مع نص التقرير الحالي أو التقرير المحدد من السجل. */
+    function openWhatsApp(data) {
+      const message = encodeURIComponent(buildWhatsAppText(data));
+      window.open(`https://wa.me/?text=${message}`, "_blank", "noopener,noreferrer");
+    }
+
+    /* حفظ التقرير النهائي أو تحديث التقرير المفتوح في التخزين المحلي. */
+    function saveReport(event) {
+      event.preventDefault();
+
+      const requiredFields = ["reportDate", "family", "responsible"];
+      const hasMissingField = requiredFields.some((fieldName) => !getFieldValue(fieldName).trim());
+      if (hasMissingField) {
+        saveStatus.textContent = "يرجى تعبئة التاريخ والأسرة المسؤولة واسم المسؤول الدعوي.";
+        form.reportValidity();
+        return;
+      }
+
+      const data = collectFormData();
+      const reports = getReports();
+      const existingReportId = form.dataset.editingId;
+      const report = {
+        id: existingReportId || `${Date.now()}`,
+        data
+      };
+
+      const existingIndex = reports.findIndex((item) => item.id === report.id);
+      if (existingIndex >= 0) {
+        reports[existingIndex] = report;
+      } else {
+        reports.push(report);
+      }
+
+      setReports(reports);
+      clearDraft();
+      delete form.dataset.editingId;
+      saveStatus.textContent = "تم حفظ التقرير بنجاح على هذا الجهاز.";
+      renderHistory();
+    }
+
+    /* حذف تقرير واحد بعد تأكيد المستخدم. */
+    function deleteReport(reportId) {
+      const report = getReports().find((item) => item.id === reportId);
+      if (!report) return;
+
+      const label = report.data.reportDate || "هذا التقرير";
+      if (!window.confirm(`هل تريد حذف تقرير ${label}؟`)) return;
+
+      setReports(getReports().filter((item) => item.id !== reportId));
+      renderHistory();
+    }
+
+    /* مشاركة تقرير محفوظ من سجل المراجعة. */
+    function shareSavedReport(reportId) {
+      const report = getReports().find((item) => item.id === reportId);
+      if (report) openWhatsApp(report.data);
+    }
+
+    /* تسجيل كل الأحداث الخاصة بعناصر واجهة الصفحة. */
+    function bindEvents() {
+      form.addEventListener("submit", saveReport);
+
+      form.addEventListener("input", saveDraft);
+      form.addEventListener("change", saveDraft);
+
+      document.querySelectorAll(".tab-button").forEach((button) => {
+        button.addEventListener("click", () => switchView(button.dataset.view));
+      });
+
+      document.getElementById("reportDate").addEventListener("change", updateDayName);
+
+      document.getElementById("whatsappButton").addEventListener("click", () => {
+        openWhatsApp(collectFormData());
+      });
+
+      document.getElementById("printButton").addEventListener("click", () => {
+        window.print();
+      });
+
+      document.getElementById("resetButton").addEventListener("click", () => {
+        if (window.confirm("هل تريد بدء تقرير جديد؟ سيتم مسح الحقول الحالية من الشاشة.")) {
+          delete form.dataset.editingId;
+          resetFormToNew();
+        }
+      });
+
+      periodFilter.addEventListener("change", renderHistory);
+      reviewDate.addEventListener("change", renderHistory);
+
+      document.getElementById("clearAllButton").addEventListener("click", () => {
+        if (!getReports().length) return;
+        if (window.confirm("هل أنت متأكد من حذف جميع التقارير المحفوظة؟ لا يمكن التراجع عن هذه العملية.")) {
+          setReports([]);
+          renderHistory();
+        }
+      });
+
+      reportsList.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const reportId = button.dataset.id;
+        if (action === "open") loadReportIntoForm(reportId);
+        if (action === "whatsapp") shareSavedReport(reportId);
+        if (action === "delete") deleteReport(reportId);
+      });
+    }
+
+    /* تهيئة الصفحة بالقيم الافتراضية والمسودة السابقة وتشغيل الأحداث. */
+    function init() {
+      document.getElementById("reportDate").value = todayString();
+      document.getElementById("reviewDate").value = todayString();
+      updateDayName();
+      loadDraft();
+      updateReportsCount();
+      bindEvents();
+      renderHistory();
+    }
+
+    /* تشغيل التطبيق بعد تحميل عناصر HTML. */
+    init();
+  </script>
+</body>
+</html>
