@@ -736,6 +736,114 @@
         grid-template-columns: 1fr;
       }
 
+      /* تحويل جدول الصلوات إلى بطاقات مرنة حتى تظهر الأعمدة كاملة على الجوال. */
+      .prayer-table-wrap {
+        overflow: visible;
+        border: 0;
+      }
+
+      /* إزالة الحد الأدنى العريض للجدول على الشاشات الصغيرة. */
+      .prayer-table {
+        display: block;
+        min-width: 0;
+      }
+
+      /* إخفاء رأس الجدول لأن أسماء الأعمدة ستظهر داخل كل بطاقة. */
+      .prayer-table thead {
+        display: none;
+      }
+
+      /* ترتيب صف كل صلاة في شبكة من عنوان وصفّي الإمام والمؤذن. */
+      .prayer-table tbody {
+        display: grid;
+        gap: 10px;
+      }
+
+      /* منح كل صلاة بطاقة مستقلة قابلة للالتفاف داخل عرض الهاتف. */
+      .prayer-table tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+      }
+
+      /* تنسيق خلايا البطاقة بعد إخفاء شكل الجدول التقليدي. */
+      .prayer-table td {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        padding: 10px 8px;
+        border: 0;
+      }
+
+      /* جعل اسم الصلاة عنوانًا بعرض البطاقة كاملًا. */
+      .prayer-table td:first-child {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        color: var(--primary-dark);
+        border-bottom: 1px solid var(--border);
+        background: #f3faf4;
+        font-size: 0.84rem;
+      }
+
+      /* إظهار اسم الإمام فوق خياراته في الهاتف. */
+      .prayer-table td:nth-child(2)::before {
+        content: "الإمام";
+        position: absolute;
+        top: 7px;
+        right: 8px;
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-weight: 700;
+      }
+
+      /* إظهار اسم المؤذن فوق خياراته في الهاتف. */
+      .prayer-table td:nth-child(3)::before {
+        content: "المؤذن";
+        position: absolute;
+        top: 7px;
+        right: 8px;
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-weight: 700;
+      }
+
+      /* ترك مساحة كافية لعنوان الإمام أو المؤذن داخل كل خلية. */
+      .prayer-table td:nth-child(2),
+      .prayer-table td:nth-child(3) {
+        position: relative;
+        align-items: flex-end;
+        padding-top: 28px;
+      }
+
+      /* توزيع خياري تم ولم يتم داخل عرض الخلية المتاح. */
+      .prayer-table .check-group {
+        display: flex;
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 4px;
+      }
+
+      /* تصغير بطاقات الخيارات حتى يظهر خيارا الإمام والمؤذن على الجوال. */
+      .prayer-table .choice {
+        justify-content: center;
+        min-width: 0;
+        flex: 1 1 0;
+        padding: 6px 3px;
+        font-size: 0.69rem;
+        white-space: nowrap;
+      }
+
+      /* تقليل حجم دائرة الاختيار داخل جدول الهاتف. */
+      .prayer-table .choice::before {
+        width: 12px;
+        height: 12px;
+        flex-basis: 12px;
+      }
+
       .history-toolbar {
         align-items: stretch;
         flex-direction: column;
