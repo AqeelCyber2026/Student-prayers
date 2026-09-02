@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>نظام التقارير الاحترافي - لوحة التحكم الموحدة</title>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
@@ -14,6 +14,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
+        .report-date-toolbar { border: 1px solid #dfe7ef; background: #f8fafc; border-radius: 14px; }
+        .report-date-toolbar .btn { white-space: nowrap; }
+        .report-date-toolbar .date-shortcuts { display: flex; flex-wrap: wrap; gap: .5rem; }
+        .report-reference-badge { font-size: .82rem; }
+        .report-table-wrap { overflow-x: auto; }
+        @media (max-width: 600px) { .main-card { padding: 15px; } .report-date-toolbar .btn { flex: 1 1 auto; min-width: 86px; } .report-date-toolbar input { min-width: 0; } .student-header { align-items: flex-start; gap: 10px; flex-wrap: wrap; } }
         :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --warning: #f1c40f; }
         body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-card { background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 25px; margin-top: 20px; border: none; }
@@ -82,7 +88,7 @@
                     </div>
                     <div class="col-md-3 col-6">
                         <div class="card hub-stat-card bg-success text-white p-3 h-100">
-                            <small>حضور الفجر اليوم</small>
+                            <small id="hub-fajr-label">حضور الفجر اليوم</small>
                             <h2 id="hub-fajr-today" class="fw-bold mb-0">0</h2>
                         </div>
                     </div>
@@ -147,7 +153,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold small">الفترة الزمنية</label>
-                        <select id="timeFrame" class="form-select">
+                        <select id="timeFrame" class="form-select" onchange="updateReportReference(); if (document.getElementById('reportOutput')?.dataset.generated === '1') runReport();">
                             <option value="0">اليوم</option>
                             <option value="7">آخر 7 أيام</option>
                             <option value="30">آخر 30 يوم</option>
@@ -155,6 +161,21 @@
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
                         <button class="btn btn-primary w-100 fw-bold" onclick="runReport()">توليد التقرير 🔍</button>
+                    </div>
+                </div>
+                <div class="report-date-toolbar p-3 mb-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <label class="fw-bold mb-0">تاريخ المرجعية للتحضير والتقرير</label>
+                        <span id="reportReferenceBadge" class="badge bg-secondary report-reference-badge">تاريخ اليوم</span>
+                    </div>
+                    <div class="date-shortcuts">
+                        <button type="button" class="btn btn-outline-primary rounded-pill fw-bold" onclick="chooseReportShortcut(0)">اليوم</button>
+                        <button type="button" class="btn btn-outline-primary rounded-pill fw-bold" onclick="chooseReportShortcut(-1)">أمس</button>
+                        <button type="button" class="btn btn-outline-primary rounded-pill fw-bold" onclick="chooseReportShortcut(-2)">أول أمس</button>
+                        <label class="d-flex align-items-center gap-2 mb-0 flex-grow-1">
+                            <span class="small fw-bold text-nowrap">يوم محدد</span>
+                            <input id="reportDate" name="reportDate" type="date" class="form-control" onchange="chooseReportDate(this.value)">
+                        </label>
                     </div>
                 </div>
 
@@ -215,7 +236,8 @@
                 <div class="row g-4">
                     <div class="col-md-4">
                         <div class="card p-3 shadow-sm border-0 h-100">
-                            <h6 class="fw-bold mb-3">💾 النسخ الاحتياطي</h6>
+                            <h6 class="fw-bold mb-2">💾 النسخ الاحتياطي</h6>
+                            <p class="small text-muted">نوصي بتصدير نسخة JSON قبل تعديل أيام قديمة بكثرة؛ البيانات محفوظة محلياً داخل هذا المتصفح وليست سحابية.</p>
                             <div class="d-grid gap-2">
                                 <button class="btn btn-outline-primary fw-bold" onclick="exportBackup()">📤 تصدير نسخة (.json)</button>
                                 <input type="file" id="importFile" class="d-none" onchange="importBackup(this)">
@@ -286,6 +308,51 @@
     const DB_KEY = "prayer_pro_v8";
     let charts = {};
     let adminMode = 'edit';
+    let selectedReportDate = localDateISO();
+
+    function addDaysToLocalDate(dateString, days) {
+        const date = new Date(`${dateString}T12:00:00`);
+        date.setDate(date.getDate() + Number(days || 0));
+        return localDateISO(date);
+    }
+
+    function getSelectedReportDate() {
+        const input = document.getElementById('reportDate');
+        const candidate = input && input.value ? input.value : selectedReportDate;
+        selectedReportDate = /^\d{4}-\d{2}-\d{2}$/.test(candidate) ? candidate : localDateISO();
+        return selectedReportDate;
+    }
+
+    function chooseReportDate(dateString, generate = true) {
+        selectedReportDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString) ? dateString : localDateISO();
+        const input = document.getElementById('reportDate');
+        if (input) input.value = selectedReportDate;
+        const time = document.getElementById('timeFrame');
+        if (time) time.value = '0';
+        updateReportReference();
+        if (generate) runReport();
+    }
+
+    function chooseReportShortcut(offset) {
+        // الأزرار تحسب دائماً من تاريخ الجهاز المحلي، لا من قيمة التقويم السابقة.
+        chooseReportDate(addDaysToLocalDate(localDateISO(), offset));
+    }
+
+    function updateReportReference() {
+        const date = getSelectedReportDate();
+        const time = Number(document.getElementById('timeFrame')?.value || 0);
+        const badge = document.getElementById('reportReferenceBadge');
+        const label = time === 0 ? (date === localDateISO() ? 'تقرير اليوم' : date === addDaysToLocalDate(localDateISO(), -1) ? 'تقرير أمس' : date === addDaysToLocalDate(localDateISO(), -2) ? 'تقرير أول أمس' : 'تقرير يوم محدد') : `مرجعية النطاق: ${date}`;
+        if (badge) badge.textContent = `${label} | ${reportDateLabel(date)}`;
+        const hubLabel = document.getElementById('hub-fajr-label');
+        if (hubLabel) hubLabel.textContent = time === 0 ? `حضور الفجر — ${reportDateLabel(date)}` : `حضور الفجر حتى ${reportDateLabel(date)}`;
+    }
+
+    function reportRange(time) {
+        const end = getSelectedReportDate();
+        if (Number(time) === 0) return { start: end, end };
+        return { start: addDaysToLocalDate(end, -(Number(time) - 1)), end };
+    }
     let currentQRData = null;
 
     async function init() {
@@ -407,9 +474,11 @@
         const totalResult = safeExec("SELECT COUNT(*) FROM students");
         setText('hub-total-students', totalResult.length ? totalResult[0].values[0][0] : 0);
 
-        // استخدام تاريخ الجهاز المحلي بدلاً من UTC حتى يظهر اليوم الصحيح على الجوال.
-        const today = localDateISO();
-        const fajrResult = safeExec("SELECT COUNT(*) FROM attendance WHERE date = ? AND prayer = ? AND status = ?", [today, 'الفجر', 'صلى']);
+        // تستخدم لوحة التحكم نفس التاريخ المرجعي الظاهر في التقارير.
+        const today = getSelectedReportDate();
+        const hubTime = Number(document.getElementById('timeFrame')?.value || 0);
+        const hubRange = reportRange(hubTime);
+        const fajrResult = safeExec("SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ? AND prayer = ? AND status = ?", [hubRange.start, hubRange.end, 'الفجر', 'صلى']);
         setText('hub-fajr-today', fajrResult.length ? fajrResult[0].values[0][0] : 0);
 
         // قراءة تاريخ الخواطر من k_date أو date حسب مخطط القاعدة الحالي.
@@ -480,7 +549,7 @@
     function filterStudentList() {
         const input = document.getElementById('studentSearchInput').value.toLowerCase();
         const list = document.getElementById('studentList');
-        const res = db.exec(`SELECT id, name FROM students WHERE name LIKE '%${input}%' LIMIT 10`);
+        const res = safeExec("SELECT id, name FROM students WHERE name LIKE ? LIMIT 10", [`%${input}%`]);
         
         if (res.length && input.length > 0) {
             list.innerHTML = res[0].values.map(v => `<option value="${v[0]}">${v[1]}</option>`).join('');
@@ -499,12 +568,12 @@
     }
 
     function runReport() {
+        if (!db) return;
         const scope = document.getElementById('scopeType').value;
-        const time = document.getElementById('timeFrame').value;
-        let filter = "1=1";
-        
-        if (time !== "0") filter += ` AND a.date >= date('now', '-${time} days')`;
-        else filter += ` AND a.date = date('now')`;
+        const time = Number(document.getElementById('timeFrame').value || 0);
+        const range = reportRange(time);
+        const params = [range.start, range.end];
+        let filter = 'a.date BETWEEN ? AND ?';
 
         if (scope === 'student') {
             const selectedId = Number(document.getElementById('selectedStudentId').value);
@@ -512,153 +581,76 @@
                 document.getElementById('reportOutput').innerHTML = '<div class="alert alert-warning text-center">اكتب اسم الطالب ثم اختره من قائمة النتائج أولاً.</div>';
                 return;
             }
-            filter += ` AND s.id = ${selectedId}`;
+            filter += ' AND s.id = ?';
+            params.push(selectedId);
         }
         if (scope === 'room') {
-            const room = document.getElementById('roomNumber').value.trim().replace(/'/g, "''");
+            const room = document.getElementById('roomNumber').value.trim();
             if (!room) {
                 document.getElementById('reportOutput').innerHTML = '<div class="alert alert-warning text-center">يرجى اختيار رقم الغرفة أولاً.</div>';
                 return;
             }
-            filter += ` AND s.room = '${room}'`;
+            filter += ' AND s.room = ?';
+            params.push(room);
         }
 
-        const sql = `
+        const res = safeExec(`
             SELECT s.name, s.room, a.date, a.prayer, a.status, a.notes, s.phone, s.id
-            FROM attendance a
-            JOIN students s ON a.s_id = s.id
+            FROM attendance a JOIN students s ON a.s_id = s.id
             WHERE ${filter}
             ORDER BY a.date DESC, CAST(s.room AS INTEGER) ASC, s.name ASC, a.prayer ASC
-        `;
-        
-        const res = db.exec(sql);
+        `, params);
         const output = document.getElementById('reportOutput');
-        
+        output.dataset.generated = '1';
+        updateReportReference();
+
         if (!res.length || !res[0].values.length) {
-            output.innerHTML = '<div class="text-center p-5 text-muted">لا توجد بيانات لهذه الفترة</div>';
+            const dayText = time === 0 ? reportDateLabel(range.start) : `من ${range.start} إلى ${range.end}`;
+            output.innerHTML = `<div class="text-center p-4 text-muted"><p class="mb-3">لا توجد سجلات تحضير لـ <strong>${dayText}</strong>؛ قد لا يكون اليوم محضّراً بعد.</p><a class="btn btn-primary rounded-pill fw-bold" href="index.html?date=${encodeURIComponent(range.end)}">بدء/تعديل التحضير لهذا التاريخ</a></div>`;
+            renderCharts();
             return;
         }
 
-        let currentStudent = "";
-        let html = "";
-        
+        let currentStudent = '';
+        let html = `<div class="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-2"><span class="fw-bold">${time === 0 ? 'التقرير اليومي' : `تقرير النطاق من ${range.start} إلى ${range.end}`}</span><span class="text-muted small">${reportDateLabel(range.end)}</span></div>`;
         res[0].values.forEach(v => {
-            const studentKey = v[0] + v[1] + v[2];
+            const studentKey = `${v[7]}|${v[2]}`;
             if (currentStudent !== studentKey) {
-                if (currentStudent !== "") html += `</div></div>`;
+                if (currentStudent !== '') html += '</div></div>';
                 currentStudent = studentKey;
-                const dayName = dayNameForDate(v[2]);
-                html += `
-                    <div class="student-block">
-                        <div class="student-header">
-                            <span class="fw-bold">${v[0]} <span class="badge bg-light text-dark ms-2">غرفة ${v[1]}</span></span>
-                            <div class="d-flex gap-2 align-items-center">
-                                <small class="me-2">${dayName} | ${v[2]}</small>
-                                <button class="btn btn-sm btn-whatsapp rounded-pill px-3" onclick="sendWhatsApp('${v[6]||''}', '${v[0]}', '${v[2]}')">واتساب 📱</button>
-                            </div>
-                        </div>
-                        <div class="prayer-grid">
-                `;
+                html += `<div class="student-block"><div class="student-header"><span class="fw-bold">${v[0]} <span class="badge bg-light text-dark ms-2">غرفة ${v[1]}</span></span><div class="d-flex gap-2 align-items-center flex-wrap"><small>${reportDateLabel(v[2])}</small><a class="btn btn-sm btn-light rounded-pill px-3" href="index.html?date=${encodeURIComponent(v[2])}">تعديل التحضير</a><button class="btn btn-sm btn-whatsapp rounded-pill px-3" onclick="sendWhatsApp('${String(v[6] || '').replace(/'/g, "\\'")}', '${String(v[0]).replace(/'/g, "\\'")}', '${v[2]}')">واتساب 📱</button></div></div><div class="prayer-grid">`;
             }
-            html += `
-                <div class="prayer-item">
-                    <div class="small text-muted">${v[3]}</div>
-                    <div class="status-${v[4]}">${v[4]}</div>
-                </div>
-            `;
+            html += `<div class="prayer-item"><div class="small text-muted">${v[3]}</div><div class="status-${v[4]}">${v[4]}</div>${v[5] ? `<div class="small text-muted mt-1">${v[5]}</div>` : ''}</div>`;
         });
-        
-        output.innerHTML = html + `</div></div>`;
-        
-        // إذا كان طالباً معيناً ولفترة، أضف زر التقرير الشامل
-        if (scope === 'student' && time !== "0") {
-            const sData = res[0].values[0];
-            const alertHtml = `
-                <div class="alert alert-primary d-flex justify-content-between align-items-center rounded-pill px-4 shadow-sm mb-4">
-                    <span>هل تريد إرسال ملخص كامل لـ <b>${sData[0]}</b> خلال ${time} يوم؟</span>
-                    <button class="btn btn-primary btn-sm rounded-pill px-4" onclick="sendComprehensiveWhatsApp('${sData[6]||''}', '${sData[0]}', ${sData[7]}, '${time}')">إرسال التقرير الشامل 📱</button>
-                </div>
-            `;
-            output.insertAdjacentHTML('afterbegin', alertHtml);
-        }
+        output.innerHTML = html + '</div></div>';
+        renderCharts();
     }
 
     // --- وظائف التحليل والرسوم ---
     function renderCharts() {
-        if (!db) return;
-        if (typeof Chart === 'undefined') {
-            alert('تعذر تحميل مكتبة الرسوم. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.');
-            return;
-        }
-
-        const time = Number(document.getElementById('timeFrame').value || 0);
-        const filter = time > 0
-            ? `a.date >= date('now', '-${time} days')`
-            : `a.date = date('now')`;
+        if (!db || typeof Chart === 'undefined') return;
+        const time = Number(document.getElementById('timeFrame')?.value || 0);
+        const range = reportRange(time);
+        const filter = 'a.date BETWEEN ? AND ?';
+        const params = [range.start, range.end];
 
         function drawChart(key, canvasId, type, labels, data, datasetOptions, options = {}) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             if (charts[key]) charts[key].destroy();
-            charts[key] = new Chart(canvas.getContext('2d'), {
-                type,
-                data: { labels, datasets: [{ data, ...datasetOptions }] },
-                options: { responsive: true, maintainAspectRatio: false, ...options }
-            });
+            charts[key] = new Chart(canvas.getContext('2d'), { type, data: { labels, datasets: [{ data, ...datasetOptions }] }, options: { responsive: true, maintainAspectRatio: false, ...options } });
         }
-
-        // الأكثر غياباً من خلال الفترة المختارة.
-        const absResult = safeExec(`
-            SELECT s.name, COUNT(*) AS count
-            FROM attendance a
-            JOIN students s ON a.s_id = s.id
-            WHERE ${filter} AND a.status = 'نائم'
-            GROUP BY s.id, s.name
-            ORDER BY count DESC, s.name ASC
-            LIMIT 5
-        `);
+        const absResult = safeExec(`SELECT s.name, COUNT(*) AS count FROM attendance a JOIN students s ON a.s_id=s.id WHERE ${filter} AND a.status='نائم' GROUP BY s.id,s.name ORDER BY count DESC,s.name ASC LIMIT 5`, params);
         const absRows = absResult.length ? absResult[0].values : [];
-        drawChart('absent', 'absentStudentsChart', 'bar', absRows.map(v => v[0]), absRows.map(v => v[1]), {
-            label: 'مرات الغياب', backgroundColor: '#e74c3c', borderRadius: 6
-        }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } });
-
-        // أكثر الغرف غياباً، بدلاً من احتساب الحضور فقط.
-        const roomResult = safeExec(`
-            SELECT s.room, COUNT(*) AS count
-            FROM attendance a
-            JOIN students s ON a.s_id = s.id
-            WHERE ${filter} AND a.status = 'نائم'
-            GROUP BY s.room
-            ORDER BY count DESC, CAST(s.room AS INTEGER) ASC
-            LIMIT 5
-        `);
+        drawChart('absent', 'absentStudentsChart', 'bar', absRows.map(v => v[0]), absRows.map(v => v[1]), { label: 'مرات الغياب', backgroundColor: '#e74c3c', borderRadius: 6 }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } });
+        const roomResult = safeExec(`SELECT s.room, COUNT(*) AS count FROM attendance a JOIN students s ON a.s_id=s.id WHERE ${filter} AND a.status='نائم' GROUP BY s.room ORDER BY count DESC,CAST(s.room AS INTEGER) ASC LIMIT 5`, params);
         const roomRows = roomResult.length ? roomResult[0].values : [];
-        drawChart('rooms', 'roomsRankChart', 'pie', roomRows.map(v => 'غرفة ' + v[0]), roomRows.map(v => v[1]), {
-            label: 'مرات الغياب', backgroundColor: ['#e74c3c', '#f39c12', '#3498db', '#9b59b6', '#2ecc71']
-        });
-
-        // ترتيب الطلاب من الأكثر غياباً إلى الأفضل حضوراً.
-        const rankResult = safeExec(`
-            SELECT s.name, s.room,
-                   SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) AS abs_count,
-                   SUM(CASE WHEN a.status = 'صلى' THEN 1 ELSE 0 END) AS present_count
-            FROM students s
-            LEFT JOIN attendance a ON s.id = a.s_id
-            GROUP BY s.id, s.name, s.room
-            ORDER BY abs_count DESC, present_count ASC, s.name ASC
-        `);
+        drawChart('rooms', 'roomsRankChart', 'pie', roomRows.map(v => 'غرفة ' + v[0]), roomRows.map(v => v[1]), { label: 'مرات الغياب', backgroundColor: ['#e74c3c','#f39c12','#3498db','#9b59b6','#2ecc71'] });
+        const rankResult = safeExec(`SELECT s.name,s.room,SUM(CASE WHEN a.status='نائم' THEN 1 ELSE 0 END) AS abs_count,SUM(CASE WHEN a.status='صلى' THEN 1 ELSE 0 END) AS present_count FROM students s LEFT JOIN attendance a ON s.id=a.s_id AND a.date BETWEEN ? AND ? GROUP BY s.id,s.name,s.room ORDER BY abs_count DESC,present_count DESC,s.name ASC`, params);
         const tbody = document.getElementById('rankingTableBody');
         if (tbody) {
             const rows = rankResult.length ? rankResult[0].values : [];
-            tbody.innerHTML = rows.length ? rows.map((v, i) => `
-                <tr>
-                    <td>${i + 1}</td>
-                    <td class="fw-bold">${v[0]}</td>
-                    <td>${v[1]}</td>
-                    <td><span class="badge bg-danger rounded-pill">${v[2]}</span></td>
-                    <td>${Number(v[2]) > 5 ? '⚠️ متابعة' : '✅ ممتاز'}</td>
-                </tr>
-            `).join('') : '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات للفترة المختارة.</td></tr>';
+            tbody.innerHTML = rows.length ? rows.map((v,i) => `<tr><td>${i+1}</td><td class="fw-bold">${v[0]}</td><td>${v[1]}</td><td><span class="badge bg-danger rounded-pill">${v[2]}</span></td><td>${Number(v[2]) > 5 ? '⚠️ متابعة' : '✅ ممتاز'}</td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات للفترة المختارة.</td></tr>';
         }
     }
 
@@ -918,6 +910,11 @@
     }
 
     init();
+    document.addEventListener('DOMContentLoaded', () => {
+        chooseReportDate(localDateISO(), false);
+        updateReportReference();
+        document.getElementById('tab-reports')?.addEventListener('shown.bs.tab', () => updateReportReference());
+    });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

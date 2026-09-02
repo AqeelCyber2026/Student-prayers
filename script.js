@@ -1,6 +1,54 @@
 let db;
-let tempChanges = {}; 
+let tempChanges = {};
 let statsChart = null;
+let selectedAttendanceDate = '';
+
+function localDateISO(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function addDaysToLocalDate(dateString, days) {
+    const d = new Date(`${dateString}T12:00:00`);
+    d.setDate(d.getDate() + Number(days || 0));
+    return localDateISO(d);
+}
+
+function dayNameForDate(dateString) {
+    const d = new Date(`${dateString}T12:00:00`);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('ar-SA', { weekday: 'long' });
+}
+
+function currentAttendanceDate() {
+    return selectedAttendanceDate || localDateISO();
+}
+
+function chooseAttendanceDate(value, reloadRoom = false) {
+    selectedAttendanceDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : localDateISO();
+    const input = document.getElementById('attendanceDate');
+    if (input) input.value = selectedAttendanceDate;
+    const label = document.getElementById('attendanceDateLabel');
+    if (label) label.textContent = `${dayNameForDate(selectedAttendanceDate)} | ${selectedAttendanceDate}`;
+    const url = new URL(window.location.href);
+    url.searchParams.set('date', selectedAttendanceDate);
+    window.history.replaceState({}, '', url);
+    if (reloadRoom && window.currentAttendanceRoom) openRoom(window.currentAttendanceRoom);
+}
+
+function chooseAttendanceShortcut(offset) {
+    chooseAttendanceDate(addDaysToLocalDate(localDateISO(), offset), Boolean(window.currentAttendanceRoom));
+}
+
+function ensureAttendanceSchema() {
+    const cols = db.exec('PRAGMA table_info(attendance)');
+    const names = cols.length ? cols[0].values.map(r => r[1]) : [];
+    if (!names.includes('notes')) db.run('ALTER TABLE attendance ADD COLUMN notes TEXT');
+    if (!names.includes('prayer')) db.run('ALTER TABLE attendance ADD COLUMN prayer TEXT');
+    if (!names.includes('date')) db.run('ALTER TABLE attendance ADD COLUMN date TEXT');
+}
+
 const config = { locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` };
 
 // 1. تشغيل النظام
@@ -12,6 +60,7 @@ window.onload = async () => {
             db = new SQL.Database(new Uint8Array(JSON.parse(saved)));
             // تحديث قاعدة البيانات إذا كانت قديمة (إضافة عمود الهاتف)
             try { db.run("ALTER TABLE students ADD COLUMN phone TEXT"); } catch(e) {}
+            ensureAttendanceSchema();
         } else {
             db = new SQL.Database();
             db.run("CREATE TABLE students (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, room TEXT, phone TEXT)");
@@ -19,11 +68,15 @@ window.onload = async () => {
             db.run("CREATE TABLE khawatir (id INTEGER PRIMARY KEY AUTOINCREMENT, s_id INTEGER, date TEXT, status TEXT, notes TEXT)");
             db.run("CREATE TABLE lectures (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, l_date TEXT)");
             db.run("CREATE TABLE lecture_attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, l_id INTEGER, s_id INTEGER, status TEXT, notes TEXT, timestamp TEXT)");
+            ensureAttendanceSchema();
             save();
         }
+        const queryDate = new URLSearchParams(window.location.search).get('date');
+        chooseAttendanceDate(queryDate || localDateISO(), false);
         document.getElementById("loading-overlay").style.display = "none";
         if(localStorage.getItem("dark-mode") === "true") document.body.classList.add("dark-mode");
         setPrayer();
+        document.getElementById('prayerSelect').addEventListener('change', () => { if (window.currentAttendanceRoom) openRoom(window.currentAttendanceRoom); });
         renderRooms();
         if(typeof renderExportRooms === 'function') renderExportRooms();
     } catch (e) { console.error(e); }
@@ -135,14 +188,19 @@ function filterRooms() {
 }
 
 function openRoom(num) {
+    window.currentAttendanceRoom = num;
     document.getElementById('roomsGrid').classList.add('d-none');
     document.getElementById('attendanceDetail').classList.remove('d-none');
     document.getElementById('roomTitle').innerText = "تحضير غرفة: " + num;
     const list = document.getElementById("attendanceList"); list.innerHTML = "";
     tempChanges = {};
     const res = db.exec("SELECT id, name FROM students WHERE room = ? ORDER BY name", [num]);
+    const saved = db.exec("SELECT s_id, status, notes FROM attendance WHERE date = ? AND prayer = ? ORDER BY id DESC", [currentAttendanceDate(), document.getElementById("prayerSelect").value]);
+    const savedByStudent = {};
+    if (saved.length) saved[0].values.forEach(row => { if (!savedByStudent[row[0]]) savedByStudent[row[0]] = { status: row[1] || '', notes: row[2] || '' }; });
     if (res.length > 0) {
         res[0].values.forEach(row => {
+            const prior = savedByStudent[row[0]] || { status: '', notes: '' };
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td class="fw-bold">${row[1]}</td>
@@ -163,7 +221,7 @@ function openRoom(num) {
 }
 
 function trackChange(id, field, val, el) {
-    if(!tempChanges[id]) tempChanges[id] = { status: "", notes: "", date: new Date().toISOString().split('T')[0] };
+    if(!tempChanges[id]) tempChanges[id] = { status: "", notes: "", date: currentAttendanceDate() };
     tempChanges[id][field] = val;
     if(field === 'status' && el) {
         const colors = {"صلى":"#19875411", "متأخر":"#ffc10711", "نائم":"#dc354511", "بعذر":"#6c757d11", "":"transparent"};
@@ -177,9 +235,18 @@ function savePrayerAttendance() {
     if(ids.length === 0) return closeSubView('rooms');
     ids.forEach(id => {
         const a = tempChanges[id];
-        db.run("INSERT INTO attendance (s_id, status, notes, prayer, date) VALUES (?, ?, ?, ?, ?)", [id, a.status, a.notes, prayer, a.date]);
+        const existing = db.exec("SELECT id FROM attendance WHERE s_id = ? AND date = ? AND prayer = ? ORDER BY id DESC LIMIT 1", [id, a.date, prayer]);
+        if (existing.length && existing[0].values.length) {
+            db.run("UPDATE attendance SET status = ?, notes = ? WHERE id = ?", [a.status, a.notes, existing[0].values[0][0]]);
+        } else {
+            db.run("INSERT INTO attendance (s_id, status, notes, prayer, date) VALUES (?, ?, ?, ?, ?)", [id, a.status, a.notes, prayer, a.date]);
+        }
     });
-    save(); alert("✅ تم حفظ تحضير الصلاة بنجاح"); closeSubView('rooms');
+    save();
+    if (typeof refreshHub === 'function') refreshHub();
+    if (typeof renderCharts === 'function') renderCharts();
+    alert(`✅ تم حفظ تحضير ${prayer} بتاريخ ${currentAttendanceDate()} دون تكرار السجل`);
+    closeSubView('rooms');
 }
 
 // 5. النسخ الاحتياطي والاستيراد
