@@ -19,6 +19,14 @@
         .report-date-toolbar .date-shortcuts { display: flex; flex-wrap: wrap; gap: .5rem; }
         .report-reference-badge { font-size: .82rem; }
         .report-table-wrap { overflow-x: auto; }
+        .followup-card { cursor: pointer; transition: .2s; border-right: 6px solid transparent !important; }
+        .followup-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.10) !important; }
+        .followup-blue { border-right-color: #3498db !important; background: #eef7ff; }
+        .followup-yellow { border-right-color: #f1c40f !important; background: #fffbea; }
+        .followup-red { border-right-color: #e74c3c !important; background: #fff1f0; }
+        .followup-normal { border-right-color: #adb5bd !important; }
+        .followup-legend span { display: inline-flex; align-items: center; gap: .35rem; margin-left: .75rem; }
+        .followup-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         @media (max-width: 600px) { .main-card { padding: 15px; } .report-date-toolbar .btn { flex: 1 1 auto; min-width: 86px; } .report-date-toolbar input { min-width: 0; } .student-header { align-items: flex-start; gap: 10px; flex-wrap: wrap; } }
         :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --warning: #f1c40f; }
         body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -65,6 +73,9 @@
             </li>
             <li class="nav-item">
                 <button class="nav-link" id="tab-analytics" data-bs-toggle="pill" data-bs-target="#content-analytics" onclick="renderCharts()">📈 التحليل البياني</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tab-followup" data-bs-toggle="pill" data-bs-target="#content-followup" onclick="renderFollowup()">⚠️ متابعة الطلاب</button>
             </li>
 
             <li class="nav-item">
@@ -190,6 +201,55 @@
                 </div>
             </div>
 
+            <!-- قسم متابعة الطلاب ذوي حالات النوم والتأخر -->
+            <div class="tab-pane fade" id="content-followup">
+                <div class="card p-3 shadow-sm border-0 mb-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div>
+                            <h5 class="fw-bold text-primary mb-1">⚠️ متابعة الطلاب</h5>
+                            <p class="small text-muted mb-0">يعرض عدد حالات «نائم» و«متأخر» للطالب خلال الفترة المختارة.</p>
+                        </div>
+                        <div class="followup-legend small text-muted">
+                            <span><i class="followup-dot" style="background:#3498db"></i>أكثر من 5</span>
+                            <span><i class="followup-dot" style="background:#f1c40f"></i>أكثر من 10</span>
+                            <span><i class="followup-dot" style="background:#e74c3c"></i>أكثر من 15</span>
+                        </div>
+                    </div>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">الفترة</label>
+                            <select id="followupPeriod" class="form-select" onchange="toggleFollowupCustomRange(); renderFollowup()">
+                                <option value="current_week">هذا الأسبوع</option>
+                                <option value="previous_week">الأسبوع الماضي</option>
+                                <option value="7">آخر 7 أيام</option>
+                                <option value="30">آخر 30 يوماً</option>
+                                <option value="0">التاريخ المرجعي فقط</option>
+                                <option value="custom">فترة مخصصة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">نوع الحالة</label>
+                            <select id="followupStatus" class="form-select" onchange="renderFollowup()">
+                                <option value="all">نائم ومتأخر</option>
+                                <option value="نائم">نائم فقط</option>
+                                <option value="متأخر">متأخر فقط</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">الأزرق من</label><input id="followupBlueThreshold" type="number" min="1" class="form-control" value="5" onchange="renderFollowup()"></div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">الأصفر من</label><input id="followupYellowThreshold" type="number" min="1" class="form-control" value="10" onchange="renderFollowup()"></div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">الأحمر من</label><input id="followupRedThreshold" type="number" min="1" class="form-control" value="15" onchange="renderFollowup()"></div>
+                        <div id="followupCustomRange" class="col-12 d-none">
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-3"><label class="form-label small fw-bold">من تاريخ</label><input id="followupStartDate" type="date" class="form-control" onchange="renderFollowup()"></div>
+                                <div class="col-md-3"><label class="form-label small fw-bold">إلى تاريخ</label><input id="followupEndDate" type="date" class="form-control" onchange="renderFollowup()"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="followupSummary" class="small text-muted mt-3"></div>
+                </div>
+                <div id="followupList" class="row g-3"></div>
+            </div>
+
             <!-- قسم التحليل البياني -->
             <div class="tab-pane fade" id="content-analytics">
                 <div class="row g-4">
@@ -274,6 +334,23 @@
     </div>
 </div>
 
+<!-- مودال تفاصيل متابعة الطالب -->
+<div class="modal fade" id="followupStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0">
+                <h5 id="followupModalTitle" class="modal-title fw-bold text-primary">تفاصيل متابعة الطالب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="followupModalBody" class="modal-body"></div>
+            <div class="modal-footer border-0 justify-content-center gap-2">
+                <button type="button" class="btn btn-dark rounded-pill fw-bold" onclick="copyFollowupStudent()">نسخ التقرير</button>
+                <button type="button" class="btn btn-success rounded-pill fw-bold" onclick="sendFollowupStudentWhatsApp()">إرسال واتساب</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- مودال عرض QR Code والإحصائيات -->
 <div class="modal fade" id="qrModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -330,6 +407,7 @@
         const time = document.getElementById('timeFrame');
         if (time) time.value = '0';
         updateReportReference();
+        if (typeof renderFollowup === 'function' && document.getElementById('content-followup')?.classList.contains('active')) renderFollowup();
         if (generate) runReport();
     }
 
@@ -652,6 +730,143 @@
             const rows = rankResult.length ? rankResult[0].values : [];
             tbody.innerHTML = rows.length ? rows.map((v,i) => `<tr><td>${i+1}</td><td class="fw-bold">${v[0]}</td><td>${v[1]}</td><td><span class="badge bg-danger rounded-pill">${v[2]}</span></td><td>${Number(v[2]) > 5 ? '⚠️ متابعة' : '✅ ممتاز'}</td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات للفترة المختارة.</td></tr>';
         }
+    }
+
+    // --- متابعة الطلاب ذوي حالات نائم ومتأخر ---
+    let followupSelectedStudent = null;
+    let followupSelectedText = '';
+
+    function startOfLocalWeek(dateString) {
+        const d = new Date(`${dateString}T12:00:00`);
+        const day = d.getDay();
+        const diffFromSaturday = day === 6 ? 0 : day + 1;
+        d.setDate(d.getDate() - diffFromSaturday);
+        return localDateISO(d);
+    }
+
+    function followupRange() {
+        const mode = document.getElementById('followupPeriod')?.value || 'current_week';
+        const reference = getSelectedReportDate();
+        if (mode === 'custom') {
+            const start = document.getElementById('followupStartDate')?.value || reference;
+            const end = document.getElementById('followupEndDate')?.value || reference;
+            return start <= end ? { start, end } : { start: end, end: start };
+        }
+        if (mode === 'current_week' || mode === 'previous_week') {
+            const currentStart = startOfLocalWeek(reference);
+            const start = mode === 'previous_week' ? addDaysToLocalDate(currentStart, -7) : currentStart;
+            return { start, end: addDaysToLocalDate(start, 6) };
+        }
+        const days = Number(mode || 7);
+        return days === 0 ? { start: reference, end: reference } : { start: addDaysToLocalDate(reference, -(days - 1)), end: reference };
+    }
+
+    function toggleFollowupCustomRange() {
+        const box = document.getElementById('followupCustomRange');
+        const custom = document.getElementById('followupPeriod')?.value === 'custom';
+        if (box) box.classList.toggle('d-none', !custom);
+        if (custom) {
+            const reference = getSelectedReportDate();
+            const start = document.getElementById('followupStartDate');
+            const end = document.getElementById('followupEndDate');
+            if (start && !start.value) start.value = addDaysToLocalDate(reference, -6);
+            if (end && !end.value) end.value = reference;
+        }
+    }
+
+    function followupThresholds() {
+        const blue = Math.max(1, Number(document.getElementById('followupBlueThreshold')?.value || 5));
+        const yellow = Math.max(blue + 1, Number(document.getElementById('followupYellowThreshold')?.value || 10));
+        const red = Math.max(yellow + 1, Number(document.getElementById('followupRedThreshold')?.value || 15));
+        return { blue, yellow, red };
+    }
+
+    function followupClass(count, thresholds) {
+        if (count >= thresholds.red) return 'followup-red';
+        if (count >= thresholds.yellow) return 'followup-yellow';
+        if (count >= thresholds.blue) return 'followup-blue';
+        return 'followup-normal';
+    }
+
+    function followupStatusLabel(status) {
+        return status === 'نائم' ? 'نائم' : status === 'متأخر' ? 'متأخر' : 'نائم ومتأخر';
+    }
+
+    function renderFollowup() {
+        if (!db) return;
+        const range = followupRange();
+        const selectedStatus = document.getElementById('followupStatus')?.value || 'all';
+        const thresholds = followupThresholds();
+        toggleFollowupCustomRange();
+        const params = [range.start, range.end];
+        let statusFilter = "a.status IN ('نائم','متأخر')";
+        if (selectedStatus !== 'all') { statusFilter = 'a.status = ?'; params.push(selectedStatus); }
+        const res = safeExec(`
+            SELECT s.id, s.name, s.room, s.phone,
+                   SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) AS asleep_count,
+                   SUM(CASE WHEN a.status = 'متأخر' THEN 1 ELSE 0 END) AS late_count,
+                   COUNT(a.id) AS total_count
+            FROM students s JOIN attendance a ON a.s_id = s.id
+            WHERE a.date BETWEEN ? AND ? AND ${statusFilter}
+            GROUP BY s.id, s.name, s.room, s.phone
+            HAVING COUNT(a.id) > 0
+            ORDER BY total_count DESC, s.name ASC
+        `, params);
+        const rows = res.length ? res[0].values : [];
+        const list = document.getElementById('followupList');
+        const summary = document.getElementById('followupSummary');
+        if (summary) summary.textContent = `الفترة: ${range.start} إلى ${range.end} | الحالة: ${followupStatusLabel(selectedStatus)} | عدد الطلاب: ${rows.length}`;
+        if (!list) return;
+        if (!rows.length) {
+            list.innerHTML = '<div class="col-12"><div class="alert alert-light text-center">لا توجد حالات مطابقة للفترة والفلتر المختارين.</div></div>';
+            return;
+        }
+        list.innerHTML = rows.map(row => {
+            const total = Number(row[5]) || 0;
+            const cls = followupClass(total, thresholds);
+            const safeName = String(row[1]).replace(/'/g, "\\'");
+            return `<div class="col-md-6 col-lg-4"><div class="card followup-card ${cls} p-3 h-100 shadow-sm" onclick="openFollowupStudent(${row[0]}, '${safeName}')"><div class="d-flex justify-content-between align-items-start gap-2"><div><h6 class="fw-bold mb-1">${row[1]}</h6><span class="badge bg-secondary rounded-pill">غرفة ${row[2]}</span></div><span class="badge bg-dark rounded-pill">${total} حالة</span></div><div class="row text-center mt-3 g-2"><div class="col-6"><div class="small text-muted">نائم</div><strong class="text-danger">${row[4]}</strong></div><div class="col-6"><div class="small text-muted">متأخر</div><strong class="text-warning">${row[5] - row[4]}</strong></div></div><div class="small text-muted mt-3">اضغط لعرض التقرير التفصيلي</div></div></div>`;
+        }).join('');
+    }
+
+    function openFollowupStudent(studentId, studentName) {
+        const range = followupRange();
+        const selectedStatus = document.getElementById('followupStatus')?.value || 'all';
+        const params = [studentId, range.start, range.end];
+        let filter = "a.s_id = ? AND a.date BETWEEN ? AND ? AND a.status IN ('نائم','متأخر')";
+        if (selectedStatus !== 'all') { filter = 'a.s_id = ? AND a.date BETWEEN ? AND ? AND a.status = ?'; params.push(selectedStatus); }
+        const res = safeExec(`SELECT a.date, a.prayer, a.status, a.notes FROM attendance a WHERE ${filter} ORDER BY a.date DESC, a.prayer ASC`, params);
+        const rows = res.length ? res[0].values : [];
+        followupSelectedStudent = { id: studentId, name: studentName, range };
+        let text = `تقرير متابعة الطالب\nالطالب: ${studentName}\nالفترة: ${range.start} إلى ${range.end}\n\n`;
+        let html = `<div class="alert alert-light border"><strong>${studentName}</strong><br><span class="small text-muted">الفترة من ${range.start} إلى ${range.end}</span></div>`;
+        if (!rows.length) { html += '<div class="text-center text-muted p-4">لا توجد تفاصيل.</div>'; }
+        else {
+            html += '<div class="table-responsive"><table class="table table-hover text-center align-middle"><thead class="table-light"><tr><th>التاريخ</th><th>الصلاة</th><th>الحالة</th><th>الملاحظة</th></tr></thead><tbody>';
+            rows.forEach(row => { html += `<tr><td>${reportDateLabel(row[0])}</td><td>${row[1] || ''}</td><td class="status-${row[2]}">${row[2]}</td><td>${row[3] || '-'}</td></tr>`; text += `${reportDateLabel(row[0])} | ${row[1] || ''} | ${row[2]}${row[3] ? ` | ${row[3]}` : ''}\n`; });
+            html += '</tbody></table></div>';
+        }
+        followupSelectedText = text;
+        document.getElementById('followupModalTitle').textContent = `تقرير متابعة: ${studentName}`;
+        document.getElementById('followupModalBody').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('followupStudentModal')).show();
+    }
+
+    function copyFollowupStudent() {
+        if (!followupSelectedText) return;
+        const done = () => alert('تم نسخ تقرير الطالب بنجاح.');
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(followupSelectedText).then(done).catch(() => fallbackCopy(followupSelectedText, done));
+        else fallbackCopy(followupSelectedText, done);
+    }
+
+    function fallbackCopy(text, done) { const area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.opacity = '0'; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove(); done(); }
+
+    function sendFollowupStudentWhatsApp() {
+        if (!followupSelectedStudent) return;
+        const r = safeExec('SELECT phone FROM students WHERE id = ?', [followupSelectedStudent.id]);
+        const phone = r.length && r[0].values.length ? r[0].values[0][0] : '';
+        if (!phone) return alert('يرجى إضافة رقم جوال الطالب أولاً من تبويب الإدارة.');
+        window.open(`https://wa.me/${String(phone).replace(/\\D/g, '')}?text=${encodeURIComponent(followupSelectedText)}`, '_blank');
     }
 
     // --- وظائف الإدارة ---
