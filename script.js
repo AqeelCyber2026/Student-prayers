@@ -243,10 +243,54 @@ function savePrayerAttendance() {
         }
     });
     save();
+    checkWeeklyThresholdAlerts();
     if (typeof refreshHub === 'function') refreshHub();
     if (typeof renderCharts === 'function') renderCharts();
     alert(`✅ تم حفظ تحضير ${prayer} بتاريخ ${currentAttendanceDate()} دون تكرار السجل`);
     closeSubView('rooms');
+}
+
+// تنبيه فوري عند تجاوز الطالب حد المتابعة الأسبوعي، مع حفظه محلياً
+// حتى يظهر لاحقاً في لوحة التقارير إذا كانت الصفحة مغلقة وقت الحفظ.
+function currentLocalWeekRangeForAlerts() {
+    const today = new Date();
+    const day = today.getDay();
+    const fromSaturday = day === 6 ? 0 : day + 1;
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - fromSaturday, 12);
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 12);
+    return { start: localDateISO(start), end: localDateISO(end) };
+}
+
+function checkWeeklyThresholdAlerts() {
+    if (!db) return;
+    const range = currentLocalWeekRangeForAlerts();
+    const result = db.exec(`SELECT s.id, s.name, s.room, COUNT(a.id) AS total_count
+        FROM students s JOIN attendance a ON a.s_id=s.id
+        WHERE a.date BETWEEN ? AND ? AND a.status IN ('نائم','متأخر')
+        GROUP BY s.id,s.name,s.room HAVING total_count IN (5,10,15) OR total_count > 15`, [range.start, range.end]);
+    const rows = result.length ? result[0].values : [];
+    const state = JSON.parse(localStorage.getItem('weekly_threshold_alerts_v1') || '{}');
+    const newAlerts = [];
+    rows.forEach(row => {
+        const count = Number(row[3]);
+        const level = count >= 15 ? 15 : count >= 10 ? 10 : 5;
+        const key = `${range.start}:${row[0]}`;
+        if (Number(state[key] || 0) < level) {
+            state[key] = level;
+            newAlerts.push({ name: row[1], room: row[2], count });
+        }
+    });
+    localStorage.setItem('weekly_threshold_alerts_v1', JSON.stringify(state));
+    if (!newAlerts.length) return;
+    const message = newAlerts.map(a => `${a.name} — غرفة ${a.room} — ${a.count} حالة`).join('\n');
+    localStorage.setItem('pending_weekly_threshold_alerts_v1', JSON.stringify({ date: new Date().toISOString(), message }));
+    const notify = () => {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('تنبيه متابعة الطلاب', { body: message, tag: 'weekly-attendance-threshold' });
+        }
+    };
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().then(notify).catch(() => {});
+    else notify();
 }
 
 // 5. النسخ الاحتياطي والاستيراد

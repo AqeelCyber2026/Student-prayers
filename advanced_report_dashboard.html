@@ -27,6 +27,11 @@
         .followup-normal { border-right-color: #adb5bd !important; }
         .followup-legend span { display: inline-flex; align-items: center; gap: .35rem; margin-left: .75rem; }
         .followup-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .weekly-alert-item { border-right: 5px solid #e74c3c; background: #fff7f6; }
+        .weekly-alert-item.alert-yellow { border-right-color: #f1c40f; background: #fffbea; }
+        .weekly-alert-item.alert-blue { border-right-color: #3498db; background: #eef7ff; }
+        .whatsapp-import-preview { max-height: 360px; overflow-y: auto; }
+        .whatsapp-import-preview tr.unmatched { background: #fff3cd; }
         @media (max-width: 600px) { .main-card { padding: 15px; } .report-date-toolbar .btn { flex: 1 1 auto; min-width: 86px; } .report-date-toolbar input { min-width: 0; } .student-header { align-items: flex-start; gap: 10px; flex-wrap: wrap; } }
         :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --warning: #f1c40f; }
         body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -76,6 +81,9 @@
             </li>
             <li class="nav-item">
                 <button class="nav-link" id="tab-followup" data-bs-toggle="pill" data-bs-target="#content-followup" onclick="renderFollowup()">⚠️ متابعة الطلاب</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tab-whatsapp-import" data-bs-toggle="pill" data-bs-target="#content-whatsapp-import" onclick="resetWhatsAppImportStatus()">📥 استيراد واتساب</button>
             </li>
 
             <li class="nav-item">
@@ -136,10 +144,27 @@
                             </div>
                         </div>
                     </div>
+                    </div>
+                </div>
+                <div class="card p-3 shadow-sm border-0 mb-4" id="weeklyAlertsCard">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div>
+                            <h6 class="fw-bold text-danger mb-1">🔔 تنبيهات هذا الأسبوع</h6>
+                            <p class="small text-muted mb-0">طلاب تجاوزوا حدود المتابعة: الأزرق 5، الأصفر 10، الأحمر 15 حالة نائم أو متأخر.</p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold" onclick="openWeeklyAlertsInFollowup()">فتح المتابعة</button>
+                            <button class="btn btn-dark btn-sm rounded-pill fw-bold" onclick="copyWeeklyAlerts()">نسخ المحدد للمشرف</button>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small mb-2">
+                        <input class="form-check-input" type="checkbox" id="weeklyAlertsSelectAll" onchange="toggleWeeklyAlertsSelectAll(this.checked)">
+                        <label for="weeklyAlertsSelectAll" class="fw-bold">تحديد كل الطلاب الظاهرين</label>
+                        <span id="weeklyAlertsSelectedCount" class="text-muted"></span>
+                    </div>
+                    <div id="weeklyAlertsList" class="row g-2"></div>
                 </div>
             </div>
-
-
 
             <!-- قسم التقارير -->
             <div class="tab-pane fade" id="content-reports">
@@ -248,6 +273,31 @@
                     <div id="followupSummary" class="small text-muted mt-3"></div>
                 </div>
                 <div id="followupList" class="row g-3"></div>
+            </div>
+
+            <!-- قسم إدخال نصوص واتساب وتحويلها إلى سجلات حضور -->
+            <div class="tab-pane fade" id="content-whatsapp-import">
+                <div class="card p-3 shadow-sm border-0 mb-3">
+                    <h5 class="fw-bold text-primary mb-1">📥 إضافة تحضير من رسالة واتساب</h5>
+                    <p class="small text-muted mb-3">الصق رسالة المشرف هنا. يتعرف النظام على الاسم والحالة، ثم يعرض معاينة قبل الحفظ.</p>
+                    <div class="alert alert-info small">أمثلة: <strong>أحمد محمد: حضر</strong> — <strong>محمد علي - متأخر</strong>. يمكن أن تحتوي الرسالة على عناوين أو أسطر إضافية.</div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><label class="form-label fw-bold small">تاريخ التحضير</label><input id="whatsappImportDate" type="date" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label fw-bold small">الصلاة</label><select id="whatsappImportPrayer" class="form-select"><option>الفجر</option><option>الظهر</option><option>العصر</option><option>المغرب</option><option>العشاء</option></select></div>
+                        <div class="col-md-4 d-flex align-items-end"><button class="btn btn-outline-secondary w-100 fw-bold" onclick="useSelectedDateForWhatsApp()">استخدام تاريخ التقرير الحالي</button></div>
+                    </div>
+                    <textarea id="whatsappImportText" class="form-control" rows="9" placeholder="الصق رسالة واتساب هنا..." oninput="previewWhatsAppImport()"></textarea>
+                    <div class="d-flex gap-2 flex-wrap mt-3">
+                        <button class="btn btn-primary rounded-pill fw-bold" onclick="previewWhatsAppImport()">🔎 معاينة المطابقة</button>
+                        <button class="btn btn-success rounded-pill fw-bold" onclick="commitWhatsAppImport()">💾 إضافة المطابقين للقاعدة</button>
+                        <button class="btn btn-outline-danger rounded-pill" onclick="clearWhatsAppImport()">مسح</button>
+                    </div>
+                    <div id="whatsappImportStatus" class="mt-3"></div>
+                </div>
+                <div class="card p-3 shadow-sm border-0">
+                    <h6 class="fw-bold mb-3">معاينة السجلات</h6>
+                    <div id="whatsappImportPreview" class="table-responsive whatsapp-import-preview"><div class="text-muted text-center p-4">الصق الرسالة لعرض المعاينة.</div></div>
+                </div>
             </div>
 
             <!-- قسم التحليل البياني -->
@@ -615,6 +665,7 @@
             )
         `);
         setText('hub-alerts-count', alertResult.length ? alertResult[0].values[0][0] : 0);
+        renderWeeklyAlerts();
     }
 
     // --- وظائف التقارير ---
@@ -1000,6 +1051,145 @@
         });
         document.getElementById('studentStatsSummary').innerHTML = `ح:${stats['حاضر']} | غ:${stats['غائب']} | ع:${stats['بعذر']}`;
     }
+
+    // --- تنبيهات الأسبوع الحالي ---
+    let weeklyAlertsText = '';
+    let weeklyAlertRows = [];
+    function currentWeekRange() {
+        const start = startOfLocalWeek(localDateISO());
+        return { start, end: addDaysToLocalDate(start, 6) };
+    }
+    function renderWeeklyAlerts() {
+        if (!db) return;
+        const range = currentWeekRange();
+        const res = safeExec(`SELECT s.id, s.name, s.room,
+            SUM(CASE WHEN a.status IN ('نائم','متأخر') THEN 1 ELSE 0 END) AS total_count,
+            SUM(CASE WHEN a.status='نائم' THEN 1 ELSE 0 END) AS asleep_count,
+            SUM(CASE WHEN a.status='متأخر' THEN 1 ELSE 0 END) AS late_count
+            FROM students s JOIN attendance a ON a.s_id=s.id
+            WHERE a.date BETWEEN ? AND ? AND a.status IN ('نائم','متأخر')
+            GROUP BY s.id,s.name,s.room HAVING total_count >= 5
+            ORDER BY total_count DESC,s.name ASC`, [range.start, range.end]);
+        const rows = res.length ? res[0].values : [];
+        weeklyAlertRows = rows;
+        const list = document.getElementById('weeklyAlertsList');
+        if (!list) return;
+        const pending = JSON.parse(localStorage.getItem('pending_weekly_threshold_alerts_v1') || 'null');
+        const pendingHtml = pending ? `<div class="col-12"><div class="alert alert-warning d-flex justify-content-between align-items-center gap-2"><span>🔔 <strong>تنبيه محفوظ:</strong> ${String(pending.message).replace(/\n/g, ' | ')}</span><button class="btn btn-sm btn-outline-dark" onclick="dismissPendingWeeklyAlert()">تمت المراجعة</button></div></div>` : '';
+        weeklyAlertsText = `🔔 تنبيه متابعة الطلاب\nالفترة: ${range.start} إلى ${range.end}\n\n`;
+        if (!rows.length) {
+            list.innerHTML = pendingHtml + '<div class="col-12"><div class="alert alert-success mb-0">✅ لا يوجد طالب تجاوز حد التنبيه هذا الأسبوع.</div></div>';
+            weeklyAlertsText += 'لا توجد حالات تجاوز للحدود.';
+            return;
+        }
+        list.innerHTML = pendingHtml + rows.map(row => {
+            const total = Number(row[3]);
+            const level = total >= 15 ? 'أحمر' : total >= 10 ? 'أصفر' : 'أزرق';
+            const cls = total >= 15 ? '' : total >= 10 ? 'alert-yellow' : 'alert-blue';
+            weeklyAlertsText += `👤 ${row[1]} | غرفة ${row[2]} | ${level}\nنائم: ${row[4]} | متأخر: ${row[5]} | الإجمالي: ${total}\n\n`;
+            return `<div class="col-md-6 col-lg-4"><div class="weekly-alert-item ${cls} rounded-3 p-3 h-100"><div class="d-flex justify-content-between gap-2"><label class="d-flex align-items-start gap-2"><input class="form-check-input weekly-alert-check mt-1" type="checkbox" value="${row[0]}" onchange="updateWeeklyAlertsSelection()"><span><strong>${row[1]}</strong><br><span class="small">غرفة ${row[2]}</span></span></label><span class="badge bg-dark rounded-pill">${total}</span></div><div class="small mt-2">نائم ${row[4]} · متأخر ${row[5]}</div><div class="small fw-bold mt-2">حد ${level}</div></div></div>`;
+        }).join('');
+        updateWeeklyAlertsSelection();
+    }
+    function openWeeklyAlertsInFollowup() {
+        document.getElementById('tab-followup')?.click();
+        const period = document.getElementById('followupPeriod');
+        if (period) period.value = 'current_week';
+        renderFollowup();
+    }
+    function dismissPendingWeeklyAlert() {
+        localStorage.removeItem('pending_weekly_threshold_alerts_v1');
+        renderWeeklyAlerts();
+    }
+    function updateWeeklyAlertsSelection() {
+        const checks = Array.from(document.querySelectorAll('.weekly-alert-check'));
+        const selected = checks.filter(c => c.checked).length;
+        const label = document.getElementById('weeklyAlertsSelectedCount');
+        if (label) label.textContent = selected ? `(${selected} محدد)` : '(لم يتم تحديد طلاب)';
+        const all = document.getElementById('weeklyAlertsSelectAll');
+        if (all) all.checked = checks.length > 0 && selected === checks.length;
+    }
+    function toggleWeeklyAlertsSelectAll(checked) {
+        document.querySelectorAll('.weekly-alert-check').forEach(c => { c.checked = checked; });
+        updateWeeklyAlertsSelection();
+    }
+    function weeklyAlertReportText(row, range) {
+        const details = safeExec(`SELECT date, prayer, status, notes FROM attendance WHERE s_id=? AND date BETWEEN ? AND ? AND status IN ('نائم','متأخر') ORDER BY date ASC, prayer ASC`, [row[0], range.start, range.end]);
+        let text = `👤 الطالب: ${row[1]}\n🏠 الغرفة: ${row[2]}\n📅 الغيابات خلال الأسبوع (${range.start} إلى ${range.end})\n`;
+        if (details.length && details[0].values.length) details[0].values.forEach(v => { text += `- ${reportDateLabel(v[0])} | ${v[1] || ''} | ${v[2]}${v[3] ? ` | ${v[3]}` : ''}\n`; });
+        text += `الإجمالي: ${row[3]} | نائم: ${row[4]} | متأخر: ${row[5]}\n`;
+        return text;
+    }
+    function copyWeeklyAlerts() {
+        const selectedIds = new Set(Array.from(document.querySelectorAll('.weekly-alert-check:checked')).map(c => Number(c.value)));
+        if (!selectedIds.size) return alert('حدد طالباً واحداً أو أكثر أولاً.');
+        const range = currentWeekRange();
+        let text = `📋 تقرير متابعة الطلاب\n📅 الفترة: ${range.start} إلى ${range.end}\n\n`;
+        weeklyAlertRows.filter(row => selectedIds.has(Number(row[0]))).forEach(row => { text += weeklyAlertReportText(row, range) + '\n'; });
+        weeklyAlertsText = text;
+        const done = () => alert('تم نسخ تنبيه الأسبوع للمشرف.');
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(weeklyAlertsText).then(done).catch(() => fallbackCopy(weeklyAlertsText, done));
+        else fallbackCopy(weeklyAlertsText, done);
+    }
+
+    // --- استيراد تحضير من نص واتساب ---
+    let whatsappImportRows = [];
+    function normalizeArabic(value) {
+        return String(value || '').toLowerCase().replace(/[إأآا]/g, 'ا').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ة/g, 'ه').replace(/[ًٌٍَُِّْـ]/g, '').replace(/[\u200f\u200e]/g, '').replace(/\s+/g, ' ').trim();
+    }
+    function whatsappStatus(line) {
+        const text = normalizeArabic(line);
+        if (/(نائم|نايم|غائب|غايب)/.test(text)) return 'نائم';
+        if (/(متاخر|متأخر|تأخر|تاخر)/.test(text)) return 'متأخر';
+        if (/(بعذر|عذر|معتذر)/.test(text)) return 'بعذر';
+        if (/(حضر|حاضر|صلى|مصلي|تم الحضور|موجود)/.test(text)) return 'صلى';
+        return '';
+    }
+    function parseWhatsAppImport() {
+        const text = document.getElementById('whatsappImportText')?.value || '';
+        const students = safeExec('SELECT id,name,room FROM students ORDER BY name ASC');
+        const all = students.length ? students[0].values : [];
+        const rows = [];
+        text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).forEach(line => {
+            const status = whatsappStatus(line);
+            if (!status) return;
+            const before = line.split(/[:：|؛\-–—]/)[0].replace(/^\s*(?:\d+[.)-]|[-*•])\s*/, '').trim();
+            const candidate = normalizeArabic(before).replace(/^(?:اسم|الطالب|الاسم)\s*/, '').trim();
+            let found = all.find(s => normalizeArabic(s[1]) === candidate);
+            if (!found) found = all.find(s => candidate.length >= 3 && normalizeArabic(s[1]).includes(candidate));
+            rows.push({ id: found?.[0] || null, name: found?.[1] || before, room: found?.[2] || '-', status, source: line });
+        });
+        const unique = new Map();
+        rows.forEach(row => unique.set(row.id ? `id:${row.id}` : `raw:${normalizeArabic(row.name)}`, row));
+        return Array.from(unique.values());
+    }
+    function previewWhatsAppImport() {
+        whatsappImportRows = parseWhatsAppImport();
+        const box = document.getElementById('whatsappImportPreview');
+        const status = document.getElementById('whatsappImportStatus');
+        if (!whatsappImportRows.length) { box.innerHTML = '<div class="text-muted text-center p-4">لم يتم العثور على أسطر تحتوي حالة معروفة.</div>'; status.innerHTML = ''; return; }
+        box.innerHTML = `<table class="table table-sm text-center align-middle"><thead class="table-light"><tr><th>الاسم المستخرج</th><th>الغرفة</th><th>الحالة</th><th>المطابقة</th></tr></thead><tbody>${whatsappImportRows.map(r => `<tr class="${r.id ? '' : 'unmatched'}"><td class="fw-bold">${r.name}</td><td>${r.room}</td><td>${r.status}</td><td>${r.id ? '✅ طالب مسجل' : '⚠️ غير مطابق — لن يضاف'}</td></tr>`).join('')}</tbody></table>`;
+        const matched = whatsappImportRows.filter(r => r.id).length;
+        status.innerHTML = `<div class="alert alert-secondary small mb-0">تم التعرف على ${whatsappImportRows.length} سطراً، منها ${matched} مطابق لطلاب مسجلين. لن تُحفظ السجلات غير المطابقة.</div>`;
+    }
+    function commitWhatsAppImport() {
+        previewWhatsAppImport();
+        const date = document.getElementById('whatsappImportDate')?.value;
+        const prayer = document.getElementById('whatsappImportPrayer')?.value;
+        const rows = whatsappImportRows.filter(r => r.id);
+        if (!date || !prayer) return alert('اختر التاريخ والصلاة أولاً.');
+        if (!rows.length) return alert('لا توجد أسماء مطابقة للحفظ.');
+        rows.forEach(row => {
+            const existing = safeExec('SELECT id FROM attendance WHERE s_id=? AND date=? AND prayer=? ORDER BY id DESC LIMIT 1', [row.id, date, prayer]);
+            if (existing.length && existing[0].values.length) db.run('UPDATE attendance SET status=?, notes=? WHERE id=?', [row.status, 'استيراد من واتساب', existing[0].values[0][0]]);
+            else db.run('INSERT INTO attendance (s_id,status,notes,prayer,date) VALUES (?,?,?,?,?)', [row.id, row.status, 'استيراد من واتساب', prayer, date]);
+        });
+        saveDB(); renderWeeklyAlerts(); refreshHub();
+        document.getElementById('whatsappImportStatus').innerHTML = `<div class="alert alert-success">✅ تمت إضافة/تحديث ${rows.length} سجلاً دون تكرار. يمكنك مراجعة التقرير الآن.</div>`;
+    }
+    function useSelectedDateForWhatsApp() { const input = document.getElementById('whatsappImportDate'); if (input) input.value = getSelectedReportDate(); }
+    function clearWhatsAppImport() { document.getElementById('whatsappImportText').value = ''; whatsappImportRows = []; previewWhatsAppImport(); }
+    function resetWhatsAppImportStatus() { const input = document.getElementById('whatsappImportDate'); if (input && !input.value) input.value = getSelectedReportDate(); }
 
     // --- التصدير PDF و Excel ---
     function exportToPDF() {
