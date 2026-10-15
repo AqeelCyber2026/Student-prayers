@@ -72,6 +72,18 @@
             #pills-tab { flex-wrap: wrap; row-gap: 8px; }
             #pills-tab .nav-item { flex: 0 0 auto; }
         }
+
+        /* تنسيق بطاقة تنظيف سجلات الغياب والتحضير مع إبقاء بيانات الطلاب. */
+        .data-cleanup-card { border: 1px solid #f5c2c7; border-radius: 16px; background: linear-gradient(135deg, #fff8f8, #fff); box-shadow: 0 4px 15px rgba(220, 53, 69, .08); }
+
+        /* تنسيق عنوان بطاقة تنظيف السجلات. */
+        .data-cleanup-title { color: #b02a37; font-weight: 700; }
+
+        /* ضمان سهولة الضغط على أزرار الحذف في الهاتف. */
+        .data-cleanup-card .btn { min-height: 44px; font-weight: 700; border-radius: 12px; }
+
+        /* جعل أزرار التنظيف بعرض كامل على الشاشات الصغيرة. */
+        @media (max-width: 600px) { .data-cleanup-card .btn { width: 100%; } }
     </style>
 </head>
 <body>
@@ -396,6 +408,33 @@
                             <input type="text" id="adminStudentSearch" class="form-control form-control-sm mb-2 rounded-pill" placeholder="🔍 بحث سريع..." oninput="renderPhoneList('search')">
                             <div id="phoneUpdateList" style="max-height: 400px; overflow-y: auto;" class="border rounded p-2 bg-light"></div>
                             <button id="saveBtnAdmin" class="btn btn-primary w-100 mt-3 fw-bold rounded-pill" onclick="saveAllStudentEdits()">💾 حفظ التعديلات النهائية</button>
+                        </div>
+                    </div>
+
+                    <!-- بطاقة مستقلة لحذف سجلات الغياب أو التحضير دون حذف أسماء الطلاب. -->
+                    <div class="col-12">
+                        <div class="card p-3 data-cleanup-card">
+                            <!-- عنوان ووصف منطقة تنظيف السجلات. -->
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="fs-4">⚠️</span>
+                                <h6 class="data-cleanup-title mb-0">تنظيف بيانات المتابعة</h6>
+                            </div>
+
+                            <!-- توضيح البيانات التي لن تتأثر بعملية الحذف. -->
+                            <p class="text-muted small mb-3">هذه الأزرار تحذف سجلات الغياب أو التحضير فقط، ولن تحذف أسماء الطلاب أو الغرف أو أرقام التواصل.</p>
+
+                            <!-- وضع كل عملية حذف في زر مستقل. -->
+                            <div class="row g-2">
+                                <!-- زر حذف سجلات حضور وغياب الصلوات. -->
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-danger w-100" onclick="deleteAllPrayerAttendance()">🗑️ حذف بيانات غياب الصلوات</button>
+                                </div>
+
+                                <!-- زر حذف سجلات تحضير المحاضرات. -->
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-warning w-100" onclick="deleteAllLectureAttendance()">🗑️ حذف بيانات تحضير المحاضرات</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1018,6 +1057,93 @@
             saveDB();
             renderPhoneList('all');
         }
+    }
+
+    // حذف جميع سجلات حضور وغياب الصلوات فقط مع إبقاء الطلاب وبياناتهم الأساسية.
+    function deleteAllPrayerAttendance() {
+        // التحقق من جاهزية قاعدة البيانات قبل تنفيذ أي عملية حذف.
+        if (!db) {
+            alert("قاعدة البيانات غير جاهزة.");
+            return;
+        }
+
+        // حساب عدد سجلات الصلوات الموجودة لعرضه في رسالة التأكيد.
+        const result = safeExec("SELECT COUNT(*) FROM attendance");
+        const recordCount = result.length ? Number(result[0].values[0][0]) : 0;
+
+        // منع تنفيذ عملية فارغة عند عدم وجود سجلات.
+        if (recordCount === 0) {
+            alert("لا توجد بيانات غياب أو حضور صلوات لحذفها.");
+            return;
+        }
+
+        // طلب تأكيد نهائي قبل حذف سجلات الغياب والحضور.
+        const confirmed = confirm(
+            `سيتم حذف ${recordCount} سجلًا من بيانات حضور وغياب الصلوات.\n\n` +
+            "لن يتم حذف أسماء الطلاب أو الغرف أو أرقام التواصل.\n\n" +
+            "هل تريد المتابعة؟"
+        );
+
+        // إلغاء العملية عند اختيار المستخدم عدم المتابعة.
+        if (!confirmed) return;
+
+        // حذف سجلات الحضور والغياب من جدول الصلوات فقط.
+        db.run("DELETE FROM attendance");
+
+        // حفظ قاعدة البيانات المحلية بعد تنفيذ الحذف.
+        saveDB();
+
+        // تحديث لوحة التحكم والتقارير والرسوم بعد الحذف.
+        refreshHub();
+        if (typeof renderCharts === "function") renderCharts();
+
+        // إظهار نتيجة العملية داخل منطقة التقرير إن كانت موجودة.
+        const reportOutput = document.getElementById("reportOutput");
+        if (reportOutput) reportOutput.innerHTML = '<div class="alert alert-success text-center">تم حذف بيانات حضور وغياب الصلوات فقط.</div>';
+
+        // إظهار رسالة نجاح للمستخدم.
+        alert("✅ تم حذف بيانات حضور وغياب الصلوات فقط.");
+    }
+
+    // حذف جميع سجلات تحضير المحاضرات فقط مع إبقاء الطلاب والمحاضرات نفسها.
+    function deleteAllLectureAttendance() {
+        // التحقق من جاهزية قاعدة البيانات قبل تنفيذ أي عملية حذف.
+        if (!db) {
+            alert("قاعدة البيانات غير جاهزة.");
+            return;
+        }
+
+        // حساب عدد سجلات التحضير الموجودة لعرضه في رسالة التأكيد.
+        const result = safeExec("SELECT COUNT(*) FROM lecture_attendance");
+        const recordCount = result.length ? Number(result[0].values[0][0]) : 0;
+
+        // منع تنفيذ عملية فارغة عند عدم وجود سجلات.
+        if (recordCount === 0) {
+            alert("لا توجد بيانات تحضير محاضرات لحذفها.");
+            return;
+        }
+
+        // طلب تأكيد نهائي قبل حذف سجلات تحضير المحاضرات.
+        const confirmed = confirm(
+            `سيتم حذف ${recordCount} سجلًا من بيانات تحضير المحاضرات.\n\n` +
+            "لن يتم حذف أسماء الطلاب أو بيانات المحاضرات.\n\n" +
+            "هل تريد المتابعة؟"
+        );
+
+        // إلغاء العملية عند اختيار المستخدم عدم المتابعة.
+        if (!confirmed) return;
+
+        // حذف سجلات التحضير من جدول المحاضرات فقط.
+        db.run("DELETE FROM lecture_attendance");
+
+        // حفظ قاعدة البيانات المحلية بعد تنفيذ الحذف.
+        saveDB();
+
+        // تحديث بطاقات الطلاب والواجهة إن كانت الدوال متاحة في الصفحة.
+        if (typeof renderStudentCards === "function") renderStudentCards();
+
+        // إظهار رسالة نجاح للمستخدم.
+        alert("✅ تم حذف بيانات تحضير المحاضرات فقط.");
     }
 
     // --- وظائف البطاقات و QR ---

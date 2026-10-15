@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>نظام التقارير الاحترافي - لوحة التحكم الموحدة</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        .report-date-toolbar { border: 1px solid #dfe7ef; background: #f8fafc; border-radius: 14px; }
+        .report-date-toolbar .btn { white-space: nowrap; }
+        .report-date-toolbar .date-shortcuts { display: flex; flex-wrap: wrap; gap: .5rem; }
+        .report-reference-badge { font-size: .82rem; }
+        .report-table-wrap { overflow-x: auto; }
+        .followup-card { cursor: pointer; transition: .2s; border-right: 6px solid transparent !important; }
+        .followup-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.10) !important; }
+        .followup-blue { border-right-color: #3498db !important; background: #eef7ff; }
+        .followup-yellow { border-right-color: #f1c40f !important; background: #fffbea; }
+        .followup-red { border-right-color: #e74c3c !important; background: #fff1f0; }
+        .followup-normal { border-right-color: #adb5bd !important; }
+        .followup-legend span { display: inline-flex; align-items: center; gap: .35rem; margin-left: .75rem; }
+        .followup-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .weekly-alert-item { border-right: 5px solid #e74c3c; background: #fff7f6; }
+        .weekly-alert-item.alert-yellow { border-right-color: #f1c40f; background: #fffbea; }
+        .weekly-alert-item.alert-blue { border-right-color: #3498db; background: #eef7ff; }
+        .whatsapp-import-preview { max-height: 360px; overflow-y: auto; }
+        .whatsapp-import-preview tr.unmatched { background: #fff3cd; }
+        @media (max-width: 600px) { .main-card { padding: 15px; } .report-date-toolbar .btn { flex: 1 1 auto; min-width: 86px; } .report-date-toolbar input { min-width: 0; } .student-header { align-items: flex-start; gap: 10px; flex-wrap: wrap; } }
+        :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --warning: #f1c40f; }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-card { background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 25px; margin-top: 20px; border: none; }
+        .nav-pills .nav-link { border-radius: 50px; font-weight: bold; margin: 0 5px; color: var(--secondary); background: #e9ecef; border: none; padding: 10px 20px; transition: 0.3s; }
+        .nav-pills .nav-link.active { background-color: var(--accent); color: white; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
+        .hub-stat-card { border-radius: 15px; border: none; transition: 0.3s; overflow: hidden; }
+        .hub-stat-card:hover { transform: translateY(-5px); }
+        .student-block { border-radius: 15px; margin-bottom: 20px; overflow: hidden; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #edf2f7; }
+        .student-header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .prayer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; padding: 15px; }
+        .prayer-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; text-align: center; }
+        .status-صلى { color: var(--success); font-weight: bold; }
+        .status-متأخر { color: var(--warning); font-weight: bold; }
+        .status-نائم { color: var(--danger); font-weight: bold; }
+        .badge-honor { background: linear-gradient(45deg, #f1c40f, #f39c12); color: white; border: none; }
+        .badge-danger-zone { background: linear-gradient(45deg, #e74c3c, #c0392b); color: white; border: none; }
+        .chart-container { position: relative; height: 250px; width: 100%; }
+        @media (max-width: 600px) {
+            .prayer-grid { grid-template-columns: 1fr 1fr; }
+            #pills-tab {
+                display: flex;
+                flex-wrap: nowrap !important;
+                justify-content: flex-start !important;
+                align-items: stretch;
+                overflow-x: auto;
+                overflow-y: hidden;
+                width: 100%;
+                max-width: 100%;
+                padding: 6px 4px 12px;
+                scrollbar-width: thin;
+                -webkit-overflow-scrolling: touch;
+            }
+            #pills-tab .nav-item { flex: 0 0 auto; }
+            #pills-tab .nav-link { white-space: nowrap; min-width: max-content; margin: 0 3px; padding: 9px 14px; }
+        }
+        @media (min-width: 601px) {
+            #pills-tab { flex-wrap: wrap; row-gap: 8px; }
+            #pills-tab .nav-item { flex: 0 0 auto; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mb-5">
+    <div class="main-card">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+            <div>
+                <h3 class="fw-bold text-primary mb-0">📊 لوحة التحكم الموحدة</h3>
+                <p class="text-muted small mb-0">نظام المتابعة والتقارير الذكي</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="index.html" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">🏠 الرئيسية</a>
+                <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" onclick="window.close()">خروج</button>
+            </div>
+        </div>
+
+        <!-- التبويبات الرئيسية -->
+        <ul class="nav nav-pills mb-4 justify-content-center" id="pills-tab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="tab-hub" data-bs-toggle="pill" data-bs-target="#content-hub" onclick="refreshHub()">🏠 لوحة التحكم</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tab-reports" data-bs-toggle="pill" data-bs-target="#content-reports">📝 التقارير</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tab-analytics" data-bs-toggle="pill" data-bs-target="#content-analytics" onclick="renderCharts()">📈 التحليل البياني</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tab-followup" data-bs-toggle="pill" data-bs-target="#content-followup" onclick="renderFollowup()">⚠️ متابعة الطلاب</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tab-whatsapp-import" data-bs-toggle="pill" data-bs-target="#content-whatsapp-import" onclick="resetWhatsAppImportStatus()">📥 استيراد واتساب</button>
+            </li>
+
+            <li class="nav-item">
+                <button class="nav-link" id="tab-admin" data-bs-toggle="pill" data-bs-target="#content-admin" onclick="renderRoomButtons()">⚙️ الإدارة</button>
+            </li>
+            <!-- رابط مستقل لفتح الملف الشامل للطالب واختيار الطالب من داخله. -->
+            <li class="nav-item">
+                <a class="nav-link" href="student_portfolio.html">👤 ملف الطالب</a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- تبويب لوحة التحكم (The Hub) -->
+            <div class="tab-pane fade show active" id="content-hub">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3 col-6">
+                        <div class="card hub-stat-card bg-primary text-white p-3 h-100">
+                            <small>إجمالي الطلاب</small>
+                            <h2 id="hub-total-students" class="fw-bold mb-0">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card hub-stat-card bg-success text-white p-3 h-100">
+                            <small id="hub-fajr-label">حضور الفجر اليوم</small>
+                            <h2 id="hub-fajr-today" class="fw-bold mb-0">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card hub-stat-card bg-warning text-dark p-3 h-100">
+                            <small>خواطر اليوم</small>
+                            <h2 id="hub-khawatir-today" class="fw-bold mb-0">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="card hub-stat-card bg-danger text-white p-3 h-100">
+                            <small>تنبيهات الغياب</small>
+                            <h2 id="hub-alerts-count" class="fw-bold mb-0">0</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- قائمة الشرف -->
+                    <div class="col-md-6">
+                        <div class="card p-3 shadow-sm border-0 h-100">
+                            <h6 class="fw-bold mb-3 text-primary">🏆 قائمة الشرف (الأكثر التزاماً)</h6>
+                            <div id="honorList" class="list-group list-group-flush">
+                                <!-- سيتم تعبئته -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- منطقة الخطر -->
+                    <div class="col-md-6">
+                        <div class="card p-3 shadow-sm border-0 h-100">
+                            <h6 class="fw-bold mb-3 text-danger">⚠️ منطقة الخطر (الأكثر غياباً)</h6>
+                            <div id="dangerZoneList" class="list-group list-group-flush">
+                                <!-- سيتم تعبئته -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card p-3 shadow-sm border-0 mb-4" id="weeklyAlertsCard">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div>
+                            <h6 class="fw-bold text-danger mb-1">🔔 تنبيهات هذا الأسبوع</h6>
+                            <p class="small text-muted mb-0">طلاب تجاوزوا حدود المتابعة: الأزرق 5، الأصفر 10، الأحمر 15 حالة نائم أو متأخر.</p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold" onclick="openWeeklyAlertsInFollowup()">فتح المتابعة</button>
+                            <button class="btn btn-dark btn-sm rounded-pill fw-bold" onclick="copyWeeklyAlerts()">نسخ المحدد للمشرف</button>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small mb-2">
+                        <input class="form-check-input" type="checkbox" id="weeklyAlertsSelectAll" onchange="toggleWeeklyAlertsSelectAll(this.checked)">
+                        <label for="weeklyAlertsSelectAll" class="fw-bold">تحديد كل الطلاب الظاهرين</label>
+                        <span id="weeklyAlertsSelectedCount" class="text-muted"></span>
+                    </div>
+                    <div id="weeklyAlertsList" class="row g-2"></div>
+                </div>
+            </div>
+
+            <!-- قسم التقارير -->
+            <div class="tab-pane fade" id="content-reports">
+                <div class="row g-3 mb-4 bg-light p-3 rounded-3 shadow-sm">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">نطاق التقرير</label>
+                        <select id="scopeType" class="form-select" onchange="toggleScopeInputs()">
+                            <option value="all">الجميع</option>
+                            <option value="student">طالب معين</option>
+                            <option value="room">غرفة معينة</option>
+                        </select>
+                    </div>
+                    <div id="studentSelectDiv" class="col-md-3 d-none position-relative">
+                        <label class="form-label fw-bold small">ابحث عن طالب</label>
+                        <input type="text" id="studentSearchInput" class="form-control" placeholder="اكتب اسم الطالب..." oninput="filterStudentList()">
+                        <select id="studentList" class="form-select mt-1" size="5" style="display:none; position:absolute; z-index:1000; width:100%;" onchange="selectStudentFromList()"></select>
+                        <input type="hidden" id="selectedStudentId">
+                    </div>
+                    <div id="roomSelectDiv" class="col-md-3 d-none">
+                        <label class="form-label fw-bold small">رقم الغرفة</label>
+                        <input type="text" id="roomNumber" class="form-control" placeholder="مثلاً: 101">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">الفترة الزمنية</label>
+                        <select id="timeFrame" class="form-select" onchange="updateReportReference(); if (document.getElementById('reportOutput')?.dataset.generated === '1') runReport();">
+                            <option value="0">اليوم</option>
+                            <option value="7">آخر 7 أيام</option>
+                            <option value="30">آخر 30 يوم</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary w-100 fw-bold" onclick="runReport()">توليد التقرير 🔍</button>
+                    </div>
+                </div>
+                <div class="report-date-toolbar p-3 mb-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <label class="fw-bold mb-0">تاريخ المرجعية للتحضير والتقرير</label>
+                        <span id="reportReferenceBadge" class="badge bg-secondary report-reference-badge">تاريخ اليوم</span>
+                    </div>
+                    <div class="date-shortcuts">
+                        <button type="button" class="btn btn-outline-primary rounded-pill fw-bold" onclick="chooseReportShortcut(0)">اليوم</button>
+                        <button type="button" class="btn btn-outline-primary rounded-pill fw-bold" onclick="chooseReportShortcut(-1)">أمس</button>
+                        <button type="button" class="btn btn-outline-primary rounded-pill fw-bold" onclick="chooseReportShortcut(-2)">أول أمس</button>
+                        <label class="d-flex align-items-center gap-2 mb-0 flex-grow-1">
+                            <span class="small fw-bold text-nowrap">يوم محدد</span>
+                            <input id="reportDate" name="reportDate" type="date" class="form-control" onchange="chooseReportDate(this.value)">
+                        </label>
+                    </div>
+                </div>
+
+                <div id="reportOutput" class="mt-3">
+                    <div class="text-center p-5 text-muted">الرجاء اختيار الفلاتر والضغط على توليد التقرير</div>
+                </div>
+                
+                <div class="mt-4 d-flex gap-2 justify-content-center flex-wrap">
+                    <button class="btn btn-success rounded-pill px-4 fw-bold" onclick="exportToExcel()">📥 Excel</button>
+                    <button class="btn btn-danger rounded-pill px-4 fw-bold" onclick="exportToPDF()">📄 PDF احترافي</button>
+                    <button class="btn btn-dark rounded-pill px-4 fw-bold" onclick="copyToWhatsApp()">📋 نسخ للواتساب</button>
+                </div>
+            </div>
+
+            <!-- قسم متابعة الطلاب ذوي حالات النوم والتأخر -->
+            <div class="tab-pane fade" id="content-followup">
+                <div class="card p-3 shadow-sm border-0 mb-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div>
+                            <h5 class="fw-bold text-primary mb-1">⚠️ متابعة الطلاب</h5>
+                            <p class="small text-muted mb-0">يعرض عدد حالات «نائم» و«متأخر» للطالب خلال الفترة المختارة.</p>
+                        </div>
+                        <div class="followup-legend small text-muted">
+                            <span><i class="followup-dot" style="background:#3498db"></i>أكثر من 5</span>
+                            <span><i class="followup-dot" style="background:#f1c40f"></i>أكثر من 10</span>
+                            <span><i class="followup-dot" style="background:#e74c3c"></i>أكثر من 15</span>
+                        </div>
+                    </div>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">الفترة</label>
+                            <select id="followupPeriod" class="form-select" onchange="toggleFollowupCustomRange(); renderFollowup()">
+                                <option value="current_week">هذا الأسبوع</option>
+                                <option value="previous_week">الأسبوع الماضي</option>
+                                <option value="7">آخر 7 أيام</option>
+                                <option value="30">آخر 30 يوماً</option>
+                                <option value="0">التاريخ المرجعي فقط</option>
+                                <option value="custom">فترة مخصصة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">نوع الحالة</label>
+                            <select id="followupStatus" class="form-select" onchange="renderFollowup()">
+                                <option value="all">نائم ومتأخر</option>
+                                <option value="نائم">نائم فقط</option>
+                                <option value="متأخر">متأخر فقط</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">الأزرق من</label><input id="followupBlueThreshold" type="number" min="1" class="form-control" value="5" onchange="renderFollowup()"></div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">الأصفر من</label><input id="followupYellowThreshold" type="number" min="1" class="form-control" value="10" onchange="renderFollowup()"></div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">الأحمر من</label><input id="followupRedThreshold" type="number" min="1" class="form-control" value="15" onchange="renderFollowup()"></div>
+                        <div id="followupCustomRange" class="col-12 d-none">
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-3"><label class="form-label small fw-bold">من تاريخ</label><input id="followupStartDate" type="date" class="form-control" onchange="renderFollowup()"></div>
+                                <div class="col-md-3"><label class="form-label small fw-bold">إلى تاريخ</label><input id="followupEndDate" type="date" class="form-control" onchange="renderFollowup()"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="followupSummary" class="small text-muted mt-3"></div>
+                </div>
+                <div id="followupList" class="row g-3"></div>
+            </div>
+
+            <!-- قسم إدخال نصوص واتساب وتحويلها إلى سجلات حضور -->
+            <div class="tab-pane fade" id="content-whatsapp-import">
+                <div class="card p-3 shadow-sm border-0 mb-3">
+                    <h5 class="fw-bold text-primary mb-1">📥 إضافة تحضير من رسالة واتساب</h5>
+                    <p class="small text-muted mb-3">الصق رسالة المشرف هنا. يتعرف النظام على الاسم والحالة، ثم يعرض معاينة قبل الحفظ.</p>
+                    <div class="alert alert-info small">أمثلة: <strong>أحمد محمد: حضر</strong> — <strong>محمد علي - متأخر</strong>. يمكن أن تحتوي الرسالة على عناوين أو أسطر إضافية.</div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><label class="form-label fw-bold small">تاريخ التحضير</label><input id="whatsappImportDate" type="date" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label fw-bold small">الصلاة</label><select id="whatsappImportPrayer" class="form-select"><option>الفجر</option><option>الظهر</option><option>العصر</option><option>المغرب</option><option>العشاء</option></select></div>
+                        <div class="col-md-4 d-flex align-items-end"><button class="btn btn-outline-secondary w-100 fw-bold" onclick="useSelectedDateForWhatsApp()">استخدام تاريخ التقرير الحالي</button></div>
+                    </div>
+                    <textarea id="whatsappImportText" class="form-control" rows="9" placeholder="الصق رسالة واتساب هنا..." oninput="previewWhatsAppImport()"></textarea>
+                    <div class="d-flex gap-2 flex-wrap mt-3">
+                        <button class="btn btn-primary rounded-pill fw-bold" onclick="previewWhatsAppImport()">🔎 معاينة المطابقة</button>
+                        <button class="btn btn-success rounded-pill fw-bold" onclick="commitWhatsAppImport()">💾 إضافة المطابقين للقاعدة</button>
+                        <button class="btn btn-outline-danger rounded-pill" onclick="clearWhatsAppImport()">مسح</button>
+                    </div>
+                    <div id="whatsappImportStatus" class="mt-3"></div>
+                </div>
+                <div class="card p-3 shadow-sm border-0">
+                    <h6 class="fw-bold mb-3">معاينة السجلات</h6>
+                    <div id="whatsappImportPreview" class="table-responsive whatsapp-import-preview"><div class="text-muted text-center p-4">الصق الرسالة لعرض المعاينة.</div></div>
+                </div>
+            </div>
+
+            <!-- قسم التحليل البياني -->
+            <div class="tab-pane fade" id="content-analytics">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card p-3 shadow-sm border-0">
+                            <h6 class="fw-bold mb-3 text-center">🏆 الطلاب الأكثر غياباً (نائم)</h6>
+                            <div class="chart-container">
+                                <canvas id="absentStudentsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-3 shadow-sm border-0">
+                            <h6 class="fw-bold mb-3 text-center">🏢 ترتيب الغرف حسب الانضباط</h6>
+                            <div class="chart-container">
+                                <canvas id="roomsRankChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="card p-3 shadow-sm border-0">
+                            <h6 class="fw-bold mb-3">📊 جدول الترتيب العام</h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover text-center align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>الترتيب</th>
+                                            <th>الاسم</th>
+                                            <th>الغرفة</th>
+                                            <th>مرات الغياب</th>
+                                            <th>الحالة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rankingTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قسم الإدارة -->
+            <div class="tab-pane fade" id="content-admin">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card p-3 shadow-sm border-0 h-100">
+                            <h6 class="fw-bold mb-2">💾 النسخ الاحتياطي</h6>
+                            <p class="small text-muted">نوصي بتصدير نسخة JSON قبل تعديل أيام قديمة بكثرة؛ البيانات محفوظة محلياً داخل هذا المتصفح وليست سحابية.</p>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary fw-bold" onclick="exportBackup()">📤 تصدير نسخة (.json)</button>
+                                <input type="file" id="importFile" class="d-none" onchange="importBackup(this)">
+                                <button class="btn btn-outline-success fw-bold" onclick="document.getElementById('importFile').click()">📥 استيراد نسخة</button>
+                            </div>
+                            <hr>
+                            <h6 class="fw-bold mb-2">📥 تصدير قوائم الطباعة</h6>
+                            <select id="exportOption" class="form-select form-select-sm mb-2">
+                                <option value="withRoom">الاسم مع الغرفة</option>
+                                <option value="nameOnly">الاسم فقط</option>
+                            </select>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-sm btn-success fw-bold" onclick="exportStudents('excel')">تصدير Excel</button>
+                                <button class="btn btn-sm btn-primary fw-bold" onclick="exportStudents('word')">تصدير Word</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card p-3 shadow-sm border-0 h-100">
+                            <h6 class="fw-bold mb-3">👤 إدارة الطلاب وتعديل البيانات</h6>
+                            <div class="d-flex gap-2 mb-3">
+                                <button id="btnEditMode" class="btn btn-sm btn-primary rounded-pill flex-grow-1 fw-bold" onclick="switchAdminMode('edit')">📝 تعديل الأسماء والغرف</button>
+                                <button id="btnDeleteMode" class="btn btn-sm btn-outline-danger rounded-pill flex-grow-1 fw-bold" onclick="switchAdminMode('delete')">🗑️ حذف طلاب</button>
+                            </div>
+                            <div id="roomButtonsContainer" class="d-flex flex-wrap gap-1 mb-3"></div>
+                            <input type="text" id="adminStudentSearch" class="form-control form-control-sm mb-2 rounded-pill" placeholder="🔍 بحث سريع..." oninput="renderPhoneList('search')">
+                            <div id="phoneUpdateList" style="max-height: 400px; overflow-y: auto;" class="border rounded p-2 bg-light"></div>
+                            <button id="saveBtnAdmin" class="btn btn-primary w-100 mt-3 fw-bold rounded-pill" onclick="saveAllStudentEdits()">💾 حفظ التعديلات النهائية</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال تفاصيل متابعة الطالب -->
+<div class="modal fade" id="followupStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0">
+                <h5 id="followupModalTitle" class="modal-title fw-bold text-primary">تفاصيل متابعة الطالب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="followupModalBody" class="modal-body"></div>
+            <div class="modal-footer border-0 justify-content-center gap-2">
+                <button type="button" class="btn btn-dark rounded-pill fw-bold" onclick="copyFollowupStudent()">نسخ التقرير</button>
+                <button type="button" class="btn btn-success rounded-pill fw-bold" onclick="sendFollowupStudentWhatsApp()">إرسال واتساب</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال عرض QR Code والإحصائيات -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">📊 الملف الشخصي للطالب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-5 text-center border-start">
+                        <div id="qrcode" class="d-flex justify-content-center mb-3 p-2 bg-white rounded shadow-sm"></div>
+                        <h5 id="qrStudentName" class="fw-bold mb-1"></h5>
+                        <p id="qrStudentRoom" class="badge bg-secondary rounded-pill mb-3"></p>
+                        <button class="btn btn-success w-100 rounded-pill fw-bold mb-2 shadow-sm" onclick="sendQRWhatsApp()">إرسال الكود للواتساب 📱</button>
+                    </div>
+                    <div class="col-md-7">
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2">📈 إحصائيات حضور المحاضرات</h6>
+                        <div style="height: 220px;">
+                            <canvas id="individualStudentChart"></canvas>
+                        </div>
+                        <div id="studentStatsSummary" class="mt-3 text-center small fw-bold p-2 bg-light rounded-pill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db;
+    const DB_KEY = "prayer_pro_v8";
+    let charts = {};
+    let adminMode = 'edit';
+    let selectedReportDate = localDateISO();
+
+    function addDaysToLocalDate(dateString, days) {
+        const date = new Date(`${dateString}T12:00:00`);
+        date.setDate(date.getDate() + Number(days || 0));
+        return localDateISO(date);
+    }
+
+    function getSelectedReportDate() {
+        const input = document.getElementById('reportDate');
+        const candidate = input && input.value ? input.value : selectedReportDate;
+        selectedReportDate = /^\d{4}-\d{2}-\d{2}$/.test(candidate) ? candidate : localDateISO();
+        return selectedReportDate;
+    }
+
+    function chooseReportDate(dateString, generate = true) {
+        selectedReportDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString) ? dateString : localDateISO();
+        const input = document.getElementById('reportDate');
+        if (input) input.value = selectedReportDate;
+        const time = document.getElementById('timeFrame');
+        if (time) time.value = '0';
+        updateReportReference();
+        if (typeof renderFollowup === 'function' && document.getElementById('content-followup')?.classList.contains('active')) renderFollowup();
+        if (generate) runReport();
+    }
+
+    function chooseReportShortcut(offset) {
+        // الأزرار تحسب دائماً من تاريخ الجهاز المحلي، لا من قيمة التقويم السابقة.
+        chooseReportDate(addDaysToLocalDate(localDateISO(), offset));
+    }
+
+    function updateReportReference() {
+        const date = getSelectedReportDate();
+        const time = Number(document.getElementById('timeFrame')?.value || 0);
+        const badge = document.getElementById('reportReferenceBadge');
+        const label = time === 0 ? (date === localDateISO() ? 'تقرير اليوم' : date === addDaysToLocalDate(localDateISO(), -1) ? 'تقرير أمس' : date === addDaysToLocalDate(localDateISO(), -2) ? 'تقرير أول أمس' : 'تقرير يوم محدد') : `مرجعية النطاق: ${date}`;
+        if (badge) badge.textContent = `${label} | ${reportDateLabel(date)}`;
+        const hubLabel = document.getElementById('hub-fajr-label');
+        if (hubLabel) hubLabel.textContent = time === 0 ? `حضور الفجر — ${reportDateLabel(date)}` : `حضور الفجر حتى ${reportDateLabel(date)}`;
+    }
+
+    function reportRange(time) {
+        const end = getSelectedReportDate();
+        if (Number(time) === 0) return { start: end, end };
+        return { start: addDaysToLocalDate(end, -(Number(time) - 1)), end };
+    }
+    let currentQRData = null;
+
+    async function init() {
+        const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` });
+        const saved = localStorage.getItem(DB_KEY);
+        if (saved) {
+            db = new SQL.Database(new Uint8Array(JSON.parse(saved)));
+            checkSchema();
+            loadStudentList();
+            refreshHub();
+        } else {
+            alert("يرجى العودة للصفحة الرئيسية لتهيئة البيانات.");
+        }
+    }
+
+    // التحقق من أعمدة أي جدول قبل بناء الاستعلامات لتفادي توقف الصفحة مع قواعد البيانات القديمة.
+    function tableColumns(tableName) {
+        const result = db.exec(`PRAGMA table_info(${tableName})`);
+        return result.length ? result[0].values.map(row => row[1]) : [];
+    }
+
+    // إضافة عمود مفقود فقط، مع الإبقاء على جميع السجلات السابقة دون حذف أو إعادة إنشاء الجدول.
+    function ensureColumn(tableName, columnName, columnType) {
+        if (!tableColumns(tableName).includes(columnName)) {
+            db.run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`);
+        }
+    }
+
+    // إنشاء الجداول المطلوبة وإتاحة مخططي الخواطر القديم والجديد في الوقت نفسه.
+    function checkSchema() {
+        try {
+            db.run("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, room TEXT, phone TEXT)");
+            db.run("CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, s_id INTEGER, status TEXT, notes TEXT, prayer TEXT, date TEXT)");
+            db.run("CREATE TABLE IF NOT EXISTS khawatir (id INTEGER PRIMARY KEY AUTOINCREMENT, s_id INTEGER, prayer TEXT, k_date TEXT, date TEXT, status TEXT, notes TEXT)");
+            db.run("CREATE TABLE IF NOT EXISTS lectures (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, l_date TEXT)");
+            db.run("CREATE TABLE IF NOT EXISTS lecture_attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, l_id INTEGER, s_id INTEGER, status TEXT, notes TEXT, timestamp TEXT)");
+            ensureColumn('students', 'phone', 'TEXT');
+            ensureColumn('khawatir', 'prayer', 'TEXT');
+            ensureColumn('khawatir', 'k_date', 'TEXT');
+            ensureColumn('khawatir', 'date', 'TEXT');
+            ensureColumn('khawatir', 'notes', 'TEXT');
+            saveDB();
+        } catch(e) {
+            console.error('Schema migration error:', e);
+        }
+    }
+
+    // حفظ نسخة قاعدة البيانات الحالية في التخزين المحلي بعد كل تعديل.
+    function saveDB() {
+        localStorage.setItem(DB_KEY, JSON.stringify(Array.from(db.export())));
+    }
+
+    // تنفيذ الاستعلام بأمان مع دعم معاملات ? وإرجاع نفس بنية db.exec حتى لا تتوقف لوحة التحكم.
+    function safeExec(sql, params = []) {
+        try {
+            if (!params || !params.length) return db.exec(sql);
+            const statement = db.prepare(sql);
+            statement.bind(params);
+            const columns = statement.getColumnNames();
+            const values = [];
+            while (statement.step()) {
+                const row = statement.getAsObject();
+                values.push(columns.map(column => row[column]));
+            }
+            statement.free();
+            return [{ columns, values }];
+        } catch (error) {
+            console.error('Database query error:', error, sql);
+            return [];
+        }
+    }
+
+    // استخراج تاريخ الجهاز بصيغة محلية ثابتة بدلاً من UTC الذي قد يغيّر اليوم في بعض الهواتف.
+    function localDateISO(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // تحديد تعبير تاريخ الخاطرة حسب إصدار قاعدة البيانات المستخدم حالياً.
+    function khawatirDateExpression(alias = 'k') {
+        const columns = tableColumns('khawatir');
+        if (columns.includes('k_date') && columns.includes('date')) return `COALESCE(${alias}.k_date, ${alias}.date)`;
+        if (columns.includes('k_date')) return `${alias}.k_date`;
+        if (columns.includes('date')) return `${alias}.date`;
+        return "''";
+    }
+
+    // تحديد تعبير الصلاة مع دعم السجلات القديمة التي لا تحتوي على عمود الصلاة.
+    function khawatirPrayerExpression(alias = 'k') {
+        return tableColumns('khawatir').includes('prayer') ? `${alias}.prayer` : "''";
+    }
+
+    // اسم اليوم للتاريخ المخزن بصيغة YYYY-MM-DD، مع تجنب انزياح UTC في الجوال.
+    function dayNameForDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(`${dateString}T12:00:00`);
+        return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('ar-SA', { weekday: 'long' });
+    }
+
+    // تنسيق واضح للتاريخ واليوم داخل التقارير والرسائل.
+    function reportDateLabel(dateString) {
+        const day = dayNameForDate(dateString);
+        return day ? `${day} | ${dateString}` : (dateString || 'غير محدد');
+    }
+
+    // تحديث عنصر نصي مع قيمة افتراضية حتى تظهر اللوحة بشكل سليم عند عدم وجود سجلات.
+    function setText(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.innerText = value;
+    }
+
+    // تحديث لوحة التحكم بالأرقام اليومية وقائمتي الشرف والخطر مع قيم افتراضية عند عدم وجود بيانات.
+    function refreshHub() {
+        if (!db) return;
+
+        // قراءة إجمالي الطلاب بأمان حتى لا تتوقف اللوحة إذا كانت القاعدة فارغة.
+        const totalResult = safeExec("SELECT COUNT(*) FROM students");
+        setText('hub-total-students', totalResult.length ? totalResult[0].values[0][0] : 0);
+
+        // تستخدم لوحة التحكم نفس التاريخ المرجعي الظاهر في التقارير.
+        const today = getSelectedReportDate();
+        const hubTime = Number(document.getElementById('timeFrame')?.value || 0);
+        const hubRange = reportRange(hubTime);
+        const fajrResult = safeExec("SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ? AND prayer = ? AND status = ?", [hubRange.start, hubRange.end, 'الفجر', 'صلى']);
+        setText('hub-fajr-today', fajrResult.length ? fajrResult[0].values[0][0] : 0);
+
+        // قراءة تاريخ الخواطر من k_date أو date حسب مخطط القاعدة الحالي.
+        const khawatirDate = khawatirDateExpression('k');
+        const khawatirResult = safeExec(`SELECT COUNT(*) FROM khawatir k WHERE ${khawatirDate} = ? AND k.status = ?`, [today, 'تم الأداء']);
+        setText('hub-khawatir-today', khawatirResult.length ? khawatirResult[0].values[0][0] : 0);
+
+        // بناء قائمة الشرف حتى عند عدم وجود سجلات، مع ترتيب ثابت للنتائج.
+        const honorResult = safeExec(`
+            SELECT s.name, SUM(CASE WHEN a.status = 'صلى' THEN 1 ELSE 0 END) AS score
+            FROM students s
+            LEFT JOIN attendance a ON s.id = a.s_id
+            GROUP BY s.id, s.name
+            HAVING score > 0
+            ORDER BY score DESC, s.name ASC
+            LIMIT 5
+        `);
+        const honorList = document.getElementById('honorList');
+        honorList.innerHTML = honorResult.length && honorResult[0].values.length
+            ? honorResult[0].values.map(v => `
+                <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                    <span>🌟 ${v[0]}</span>
+                    <span class="badge badge-honor rounded-pill">${v[1]} صلاة</span>
+                </div>
+            `).join('')
+            : '<div class="text-muted small py-2">لا توجد سجلات حضور كافية بعد.</div>';
+
+        // بناء منطقة الخطر وإظهار عدد الطلاب الذين تجاوزوا خمس حالات غياب.
+        const dangerResult = safeExec(`
+            SELECT s.name, SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) AS score
+            FROM students s
+            LEFT JOIN attendance a ON s.id = a.s_id
+            GROUP BY s.id, s.name
+            HAVING score > 0
+            ORDER BY score DESC, s.name ASC
+            LIMIT 5
+        `);
+        const dangerList = document.getElementById('dangerZoneList');
+        dangerList.innerHTML = dangerResult.length && dangerResult[0].values.length
+            ? dangerResult[0].values.map(v => `
+                <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                    <span>⚠️ ${v[0]}</span>
+                    <span class="badge badge-danger-zone rounded-pill">${v[1]} غياب</span>
+                </div>
+            `).join('')
+            : '<div class="text-muted small py-2">لا توجد حالات غياب مسجلة.</div>';
+
+        // حساب التنبيهات من كامل النتائج بدلاً من الاقتصار على الخمسة المعروضين.
+        const alertResult = safeExec(`
+            SELECT COUNT(*) FROM (
+                SELECT s.id
+                FROM students s
+                LEFT JOIN attendance a ON s.id = a.s_id
+                GROUP BY s.id
+                HAVING SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) > 5
+            )
+        `);
+        setText('hub-alerts-count', alertResult.length ? alertResult[0].values[0][0] : 0);
+        renderWeeklyAlerts();
+    }
+
+    // --- وظائف التقارير ---
+    function toggleScopeInputs() {
+        const scope = document.getElementById('scopeType').value;
+        document.getElementById('studentSelectDiv').className = scope === 'student' ? 'col-md-3 position-relative' : 'col-md-3 d-none';
+        document.getElementById('roomSelectDiv').className = scope === 'room' ? 'col-md-3' : 'col-md-3 d-none';
+    }
+
+    function filterStudentList() {
+        const input = document.getElementById('studentSearchInput').value.toLowerCase();
+        const list = document.getElementById('studentList');
+        const res = safeExec("SELECT id, name FROM students WHERE name LIKE ? LIMIT 10", [`%${input}%`]);
+        
+        if (res.length && input.length > 0) {
+            list.innerHTML = res[0].values.map(v => `<option value="${v[0]}">${v[1]}</option>`).join('');
+            list.style.display = 'block';
+        } else {
+            list.style.display = 'none';
+        }
+    }
+
+    function selectStudentFromList() {
+        const list = document.getElementById('studentList');
+        document.getElementById('studentSearchInput').value = list.options[list.selectedIndex].text;
+        document.getElementById('selectedStudentId').value = list.value;
+        list.style.display = 'none';
+        runReport();
+    }
+
+    function runReport() {
+        if (!db) return;
+        const scope = document.getElementById('scopeType').value;
+        const time = Number(document.getElementById('timeFrame').value || 0);
+        const range = reportRange(time);
+        const params = [range.start, range.end];
+        let filter = 'a.date BETWEEN ? AND ?';
+
+        if (scope === 'student') {
+            const selectedId = Number(document.getElementById('selectedStudentId').value);
+            if (!selectedId) {
+                document.getElementById('reportOutput').innerHTML = '<div class="alert alert-warning text-center">اكتب اسم الطالب ثم اختره من قائمة النتائج أولاً.</div>';
+                return;
+            }
+            filter += ' AND s.id = ?';
+            params.push(selectedId);
+        }
+        if (scope === 'room') {
+            const room = document.getElementById('roomNumber').value.trim();
+            if (!room) {
+                document.getElementById('reportOutput').innerHTML = '<div class="alert alert-warning text-center">يرجى اختيار رقم الغرفة أولاً.</div>';
+                return;
+            }
+            filter += ' AND s.room = ?';
+            params.push(room);
+        }
+
+        const res = safeExec(`
+            SELECT s.name, s.room, a.date, a.prayer, a.status, a.notes, s.phone, s.id
+            FROM attendance a JOIN students s ON a.s_id = s.id
+            WHERE ${filter}
+            ORDER BY a.date DESC, CAST(s.room AS INTEGER) ASC, s.name ASC, a.prayer ASC
+        `, params);
+        const output = document.getElementById('reportOutput');
+        output.dataset.generated = '1';
+        updateReportReference();
+
+        if (!res.length || !res[0].values.length) {
+            const dayText = time === 0 ? reportDateLabel(range.start) : `من ${range.start} إلى ${range.end}`;
+            output.innerHTML = `<div class="text-center p-4 text-muted"><p class="mb-3">لا توجد سجلات تحضير لـ <strong>${dayText}</strong>؛ قد لا يكون اليوم محضّراً بعد.</p><a class="btn btn-primary rounded-pill fw-bold" href="index.html?date=${encodeURIComponent(range.end)}">بدء/تعديل التحضير لهذا التاريخ</a></div>`;
+            renderCharts();
+            return;
+        }
+
+        let currentStudent = '';
+        let html = `<div class="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-2"><span class="fw-bold">${time === 0 ? 'التقرير اليومي' : `تقرير النطاق من ${range.start} إلى ${range.end}`}</span><span class="text-muted small">${reportDateLabel(range.end)}</span></div>`;
+        res[0].values.forEach(v => {
+            const studentKey = `${v[7]}|${v[2]}`;
+            if (currentStudent !== studentKey) {
+                if (currentStudent !== '') html += '</div></div>';
+                currentStudent = studentKey;
+                html += `<div class="student-block"><div class="student-header"><span class="fw-bold">${v[0]} <span class="badge bg-light text-dark ms-2">غرفة ${v[1]}</span></span><div class="d-flex gap-2 align-items-center flex-wrap"><small>${reportDateLabel(v[2])}</small><a class="btn btn-sm btn-light rounded-pill px-3" href="index.html?date=${encodeURIComponent(v[2])}">تعديل التحضير</a><button class="btn btn-sm btn-whatsapp rounded-pill px-3" onclick="sendWhatsApp('${String(v[6] || '').replace(/'/g, "\\'")}', '${String(v[0]).replace(/'/g, "\\'")}', '${v[2]}')">واتساب 📱</button></div></div><div class="prayer-grid">`;
+            }
+            html += `<div class="prayer-item"><div class="small text-muted">${v[3]}</div><div class="status-${v[4]}">${v[4]}</div>${v[5] ? `<div class="small text-muted mt-1">${v[5]}</div>` : ''}</div>`;
+        });
+        output.innerHTML = html + '</div></div>';
+        renderCharts();
+    }
+
+    // --- وظائف التحليل والرسوم ---
+    function renderCharts() {
+        if (!db || typeof Chart === 'undefined') return;
+        const time = Number(document.getElementById('timeFrame')?.value || 0);
+        const range = reportRange(time);
+        const filter = 'a.date BETWEEN ? AND ?';
+        const params = [range.start, range.end];
+
+        function drawChart(key, canvasId, type, labels, data, datasetOptions, options = {}) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            if (charts[key]) charts[key].destroy();
+            charts[key] = new Chart(canvas.getContext('2d'), { type, data: { labels, datasets: [{ data, ...datasetOptions }] }, options: { responsive: true, maintainAspectRatio: false, ...options } });
+        }
+        const absResult = safeExec(`SELECT s.name, COUNT(*) AS count FROM attendance a JOIN students s ON a.s_id=s.id WHERE ${filter} AND a.status='نائم' GROUP BY s.id,s.name ORDER BY count DESC,s.name ASC LIMIT 5`, params);
+        const absRows = absResult.length ? absResult[0].values : [];
+        drawChart('absent', 'absentStudentsChart', 'bar', absRows.map(v => v[0]), absRows.map(v => v[1]), { label: 'مرات الغياب', backgroundColor: '#e74c3c', borderRadius: 6 }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } });
+        const roomResult = safeExec(`SELECT s.room, COUNT(*) AS count FROM attendance a JOIN students s ON a.s_id=s.id WHERE ${filter} AND a.status='نائم' GROUP BY s.room ORDER BY count DESC,CAST(s.room AS INTEGER) ASC LIMIT 5`, params);
+        const roomRows = roomResult.length ? roomResult[0].values : [];
+        drawChart('rooms', 'roomsRankChart', 'pie', roomRows.map(v => 'غرفة ' + v[0]), roomRows.map(v => v[1]), { label: 'مرات الغياب', backgroundColor: ['#e74c3c','#f39c12','#3498db','#9b59b6','#2ecc71'] });
+        const rankResult = safeExec(`SELECT s.name,s.room,SUM(CASE WHEN a.status='نائم' THEN 1 ELSE 0 END) AS abs_count,SUM(CASE WHEN a.status='صلى' THEN 1 ELSE 0 END) AS present_count FROM students s LEFT JOIN attendance a ON s.id=a.s_id AND a.date BETWEEN ? AND ? GROUP BY s.id,s.name,s.room ORDER BY abs_count DESC,present_count DESC,s.name ASC`, params);
+        const tbody = document.getElementById('rankingTableBody');
+        if (tbody) {
+            const rows = rankResult.length ? rankResult[0].values : [];
+            tbody.innerHTML = rows.length ? rows.map((v,i) => `<tr><td>${i+1}</td><td class="fw-bold">${v[0]}</td><td>${v[1]}</td><td><span class="badge bg-danger rounded-pill">${v[2]}</span></td><td>${Number(v[2]) > 5 ? '⚠️ متابعة' : '✅ ممتاز'}</td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات للفترة المختارة.</td></tr>';
+        }
+    }
+
+    // --- متابعة الطلاب ذوي حالات نائم ومتأخر ---
+    let followupSelectedStudent = null;
+    let followupSelectedText = '';
+
+    function startOfLocalWeek(dateString) {
+        const d = new Date(`${dateString}T12:00:00`);
+        const day = d.getDay();
+        const diffFromSaturday = day === 6 ? 0 : day + 1;
+        d.setDate(d.getDate() - diffFromSaturday);
+        return localDateISO(d);
+    }
+
+    function followupRange() {
+        const mode = document.getElementById('followupPeriod')?.value || 'current_week';
+        const reference = getSelectedReportDate();
+        if (mode === 'custom') {
+            const start = document.getElementById('followupStartDate')?.value || reference;
+            const end = document.getElementById('followupEndDate')?.value || reference;
+            return start <= end ? { start, end } : { start: end, end: start };
+        }
+        if (mode === 'current_week' || mode === 'previous_week') {
+            const currentStart = startOfLocalWeek(reference);
+            const start = mode === 'previous_week' ? addDaysToLocalDate(currentStart, -7) : currentStart;
+            return { start, end: addDaysToLocalDate(start, 6) };
+        }
+        const days = Number(mode || 7);
+        return days === 0 ? { start: reference, end: reference } : { start: addDaysToLocalDate(reference, -(days - 1)), end: reference };
+    }
+
+    function toggleFollowupCustomRange() {
+        const box = document.getElementById('followupCustomRange');
+        const custom = document.getElementById('followupPeriod')?.value === 'custom';
+        if (box) box.classList.toggle('d-none', !custom);
+        if (custom) {
+            const reference = getSelectedReportDate();
+            const start = document.getElementById('followupStartDate');
+            const end = document.getElementById('followupEndDate');
+            if (start && !start.value) start.value = addDaysToLocalDate(reference, -6);
+            if (end && !end.value) end.value = reference;
+        }
+    }
+
+    function followupThresholds() {
+        const blue = Math.max(1, Number(document.getElementById('followupBlueThreshold')?.value || 5));
+        const yellow = Math.max(blue + 1, Number(document.getElementById('followupYellowThreshold')?.value || 10));
+        const red = Math.max(yellow + 1, Number(document.getElementById('followupRedThreshold')?.value || 15));
+        return { blue, yellow, red };
+    }
+
+    function followupClass(count, thresholds) {
+        if (count >= thresholds.red) return 'followup-red';
+        if (count >= thresholds.yellow) return 'followup-yellow';
+        if (count >= thresholds.blue) return 'followup-blue';
+        return 'followup-normal';
+    }
+
+    function followupStatusLabel(status) {
+        return status === 'نائم' ? 'نائم' : status === 'متأخر' ? 'متأخر' : 'نائم ومتأخر';
+    }
+
+    function renderFollowup() {
+        if (!db) return;
+        const range = followupRange();
+        const selectedStatus = document.getElementById('followupStatus')?.value || 'all';
+        const thresholds = followupThresholds();
+        toggleFollowupCustomRange();
+        const params = [range.start, range.end];
+        let statusFilter = "a.status IN ('نائم','متأخر')";
+        if (selectedStatus !== 'all') { statusFilter = 'a.status = ?'; params.push(selectedStatus); }
+        const res = safeExec(`
+            SELECT s.id, s.name, s.room, s.phone,
+                   SUM(CASE WHEN a.status = 'نائم' THEN 1 ELSE 0 END) AS asleep_count,
+                   SUM(CASE WHEN a.status = 'متأخر' THEN 1 ELSE 0 END) AS late_count,
+                   COUNT(a.id) AS total_count
+            FROM students s JOIN attendance a ON a.s_id = s.id
+            WHERE a.date BETWEEN ? AND ? AND ${statusFilter}
+            GROUP BY s.id, s.name, s.room, s.phone
+            HAVING COUNT(a.id) > 0
+            ORDER BY total_count DESC, s.name ASC
+        `, params);
+        const rows = res.length ? res[0].values : [];
+        const list = document.getElementById('followupList');
+        const summary = document.getElementById('followupSummary');
+        if (summary) summary.textContent = `الفترة: ${range.start} إلى ${range.end} | الحالة: ${followupStatusLabel(selectedStatus)} | عدد الطلاب: ${rows.length}`;
+        if (!list) return;
+        if (!rows.length) {
+            list.innerHTML = '<div class="col-12"><div class="alert alert-light text-center">لا توجد حالات مطابقة للفترة والفلتر المختارين.</div></div>';
+            return;
+        }
+        list.innerHTML = rows.map(row => {
+            const total = Number(row[5]) || 0;
+            const cls = followupClass(total, thresholds);
+            const safeName = String(row[1]).replace(/'/g, "\\'");
+            return `<div class="col-md-6 col-lg-4"><div class="card followup-card ${cls} p-3 h-100 shadow-sm" onclick="openFollowupStudent(${row[0]}, '${safeName}')"><div class="d-flex justify-content-between align-items-start gap-2"><div><h6 class="fw-bold mb-1">${row[1]}</h6><span class="badge bg-secondary rounded-pill">غرفة ${row[2]}</span></div><span class="badge bg-dark rounded-pill">${total} حالة</span></div><div class="row text-center mt-3 g-2"><div class="col-6"><div class="small text-muted">نائم</div><strong class="text-danger">${row[4]}</strong></div><div class="col-6"><div class="small text-muted">متأخر</div><strong class="text-warning">${row[5] - row[4]}</strong></div></div><div class="small text-muted mt-3">اضغط لعرض التقرير التفصيلي</div></div></div>`;
+        }).join('');
+    }
+
+    function openFollowupStudent(studentId, studentName) {
+        const range = followupRange();
+        const selectedStatus = document.getElementById('followupStatus')?.value || 'all';
+        const params = [studentId, range.start, range.end];
+        let filter = "a.s_id = ? AND a.date BETWEEN ? AND ? AND a.status IN ('نائم','متأخر')";
+        if (selectedStatus !== 'all') { filter = 'a.s_id = ? AND a.date BETWEEN ? AND ? AND a.status = ?'; params.push(selectedStatus); }
+        const res = safeExec(`SELECT a.date, a.prayer, a.status, a.notes FROM attendance a WHERE ${filter} ORDER BY a.date DESC, a.prayer ASC`, params);
+        const rows = res.length ? res[0].values : [];
+        followupSelectedStudent = { id: studentId, name: studentName, range };
+        let text = `تقرير متابعة الطالب\nالطالب: ${studentName}\nالفترة: ${range.start} إلى ${range.end}\n\n`;
+        let html = `<div class="alert alert-light border"><strong>${studentName}</strong><br><span class="small text-muted">الفترة من ${range.start} إلى ${range.end}</span></div>`;
+        if (!rows.length) { html += '<div class="text-center text-muted p-4">لا توجد تفاصيل.</div>'; }
+        else {
+            html += '<div class="table-responsive"><table class="table table-hover text-center align-middle"><thead class="table-light"><tr><th>التاريخ</th><th>الصلاة</th><th>الحالة</th><th>الملاحظة</th></tr></thead><tbody>';
+            rows.forEach(row => { html += `<tr><td>${reportDateLabel(row[0])}</td><td>${row[1] || ''}</td><td class="status-${row[2]}">${row[2]}</td><td>${row[3] || '-'}</td></tr>`; text += `${reportDateLabel(row[0])} | ${row[1] || ''} | ${row[2]}${row[3] ? ` | ${row[3]}` : ''}\n`; });
+            html += '</tbody></table></div>';
+        }
+        followupSelectedText = text;
+        document.getElementById('followupModalTitle').textContent = `تقرير متابعة: ${studentName}`;
+        document.getElementById('followupModalBody').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('followupStudentModal')).show();
+    }
+
+    function copyFollowupStudent() {
+        if (!followupSelectedText) return;
+        const done = () => alert('تم نسخ تقرير الطالب بنجاح.');
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(followupSelectedText).then(done).catch(() => fallbackCopy(followupSelectedText, done));
+        else fallbackCopy(followupSelectedText, done);
+    }
+
+    function fallbackCopy(text, done) { const area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.opacity = '0'; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove(); done(); }
+
+    function sendFollowupStudentWhatsApp() {
+        if (!followupSelectedStudent) return;
+        const r = safeExec('SELECT phone FROM students WHERE id = ?', [followupSelectedStudent.id]);
+        const phone = r.length && r[0].values.length ? r[0].values[0][0] : '';
+        if (!phone) return alert('يرجى إضافة رقم جوال الطالب أولاً من تبويب الإدارة.');
+        window.open(`https://wa.me/${String(phone).replace(/\\D/g, '')}?text=${encodeURIComponent(followupSelectedText)}`, '_blank');
+    }
+
+    // --- وظائف الإدارة ---
+    function switchAdminMode(mode) {
+        adminMode = mode;
+        document.getElementById('btnEditMode').className = mode === 'edit' ? "btn btn-sm btn-primary rounded-pill flex-grow-1 fw-bold" : "btn btn-sm btn-outline-primary rounded-pill flex-grow-1 fw-bold";
+        document.getElementById('btnDeleteMode').className = mode === 'delete' ? "btn btn-sm btn-danger rounded-pill flex-grow-1 fw-bold" : "btn btn-sm btn-outline-danger rounded-pill flex-grow-1 fw-bold";
+        document.getElementById('saveBtnAdmin').style.display = mode === 'edit' ? 'block' : 'none';
+        renderPhoneList('all');
+    }
+
+    function renderRoomButtons() {
+        const res = db.exec("SELECT DISTINCT room FROM students ORDER BY CAST(room AS INTEGER) ASC");
+        const container = document.getElementById('roomButtonsContainer');
+        let html = '<button class="btn btn-xs btn-outline-secondary rounded-pill px-3 mb-1" onclick="renderPhoneList(\'all\')">الكل</button>';
+        if (res.length) {
+            html += res[0].values.map(v => `<button class="btn btn-xs btn-outline-primary rounded-pill px-3 mb-1" onclick="renderPhoneList('${v[0]}')">غرفة ${v[0]}</button>`).join('');
+        }
+        container.innerHTML = html;
+        renderPhoneList('all');
+    }
+
+    function renderPhoneList(mode = 'all') {
+        let sql = "SELECT id, name, phone, room FROM students ";
+        const search = document.getElementById('adminStudentSearch').value;
+        if (mode === 'search' && search) sql += ` WHERE name LIKE '%${search}%' OR room LIKE '%${search}%' `;
+        else if (mode !== 'all' && mode !== 'search') sql += ` WHERE room = '${mode}' `;
+        sql += " ORDER BY CAST(room AS INTEGER) ASC, name ASC";
+        
+        const res = db.exec(sql);
+        const div = document.getElementById('phoneUpdateList');
+        if (!res.length || !res[0].values.length) {
+            div.innerHTML = '<div class="text-center p-4">لا توجد نتائج</div>';
+            return;
+        }
+
+        let html = `<table class="table table-sm align-middle mb-0"><tbody>`;
+        res[0].values.forEach(v => {
+            if (adminMode === 'edit') {
+                html += `
+                    <tr>
+                        <td><input type="text" class="form-control form-control-sm border-0 fw-bold edit-name" data-id="${v[0]}" value="${v[1]}"></td>
+                        <td style="width: 80px;"><input type="text" class="form-control form-control-sm border-0 text-center edit-room" data-id="${v[0]}" value="${v[3]}"></td>
+                        <td><input type="text" class="form-control form-control-sm border-0 edit-phone" data-id="${v[0]}" value="${v[2]||''}" placeholder="جوال"></td>
+                    </tr>
+                `;
+            } else {
+                html += `
+                    <tr>
+                        <td class="fw-bold">${v[1]}</td>
+                        <td>غرفة ${v[3]}</td>
+                        <td class="text-end"><button class="btn btn-xs btn-danger rounded-pill" onclick="deleteStudentAdmin(${v[0]})">حذف 🗑️</button></td>
+                    </tr>
+                `;
+            }
+        });
+        div.innerHTML = html + `</tbody></table>`;
+    }
+
+    function saveAllStudentEdits() {
+        const rows = document.querySelectorAll('#phoneUpdateList tbody tr');
+        rows.forEach(row => {
+            const id = row.querySelector('.edit-name').getAttribute('data-id');
+            const name = row.querySelector('.edit-name').value;
+            const room = row.querySelector('.edit-room').value;
+            const phone = row.querySelector('.edit-phone').value;
+            db.run("UPDATE students SET name = ?, room = ?, phone = ? WHERE id = ?", [name, room, phone, id]);
+        });
+        saveDB();
+        alert("✅ تم حفظ التعديلات بنجاح!");
+        renderRoomButtons();
+    }
+
+    function deleteStudentAdmin(id) {
+        if (confirm("⚠️ هل أنت متأكد من الحذف النهائي؟")) {
+            db.run("DELETE FROM attendance WHERE s_id = ?", [id]);
+            db.run("DELETE FROM students WHERE id = ?", [id]);
+            saveDB();
+            renderPhoneList('all');
+        }
+    }
+
+    // --- وظائف البطاقات و QR ---
+    function renderStudentCards() {
+        const search = document.getElementById('cardSearchInput').value.toLowerCase();
+        const res = db.exec("SELECT id, name, room, phone FROM students ORDER BY CAST(room AS INTEGER) ASC, name ASC");
+        const container = document.getElementById('studentCardsContainer');
+        
+        if (res.length && res[0].values.length) {
+            const filtered = res[0].values.filter(v => v[1].toLowerCase().includes(search) || v[2].toString().includes(search));
+            container.innerHTML = filtered.map(v => `
+                <div class="col-md-4 col-6">
+                    <div class="card p-3 text-center shadow-sm border-0 h-100" style="border-top: 4px solid var(--accent);">
+                        <div class="mb-2" style="font-size: 30px;">👤</div>
+                        <h6 class="fw-bold mb-1 text-truncate">${v[1]}</h6>
+                        <span class="badge bg-light text-dark mb-3 border">غرفة ${v[2]}</span>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-xs btn-primary rounded-pill fw-bold" onclick="showQR(${v[0]}, '${v[1]}', '${v[3]||''}', '${v[2]}')">🎫 الكود</button>
+                            <button class="btn btn-xs btn-outline-success rounded-pill fw-bold" onclick="sendQRDirect(${v[0]}, '${v[1]}', '${v[3]||''}')">📱 إرسال</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    function showQR(id, name, phone, room) {
+        document.getElementById('qrcode').innerHTML = "";
+        document.getElementById('qrStudentName').innerText = name;
+        document.getElementById('qrStudentRoom').innerText = "غرفة: " + room;
+        currentQRData = { id, name, phone };
+        new QRCode(document.getElementById("qrcode"), { text: `STUDENT_ID:${id}`, width: 150, height: 150 });
+        renderIndividualChart(id);
+        new bootstrap.Modal(document.getElementById('qrModal')).show();
+    }
+
+    function renderIndividualChart(sid) {
+        const res = db.exec(`SELECT status, COUNT(*) FROM lecture_attendance WHERE s_id = ? GROUP BY status`, [sid]);
+        let stats = { 'حاضر': 0, 'غائب': 0, 'بعذر': 0 };
+        if (res.length) res[0].values.forEach(v => { stats[v[0]] = v[1]; });
+        
+        const ctx = document.getElementById('individualStudentChart').getContext('2d');
+        if (charts.individual) charts.individual.destroy();
+        charts.individual = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['حاضر', 'غائب', 'بعذر'],
+                datasets: [{ data: [stats['حاضر'], stats['غائب'], stats['بعذر']], backgroundColor: ['#27ae60', '#e74c3c', '#f1c40f'] }]
+            },
+            options: { maintainAspectRatio: false, cutout: '70%' }
+        });
+        document.getElementById('studentStatsSummary').innerHTML = `ح:${stats['حاضر']} | غ:${stats['غائب']} | ع:${stats['بعذر']}`;
+    }
+
+    // --- تنبيهات الأسبوع الحالي ---
+    let weeklyAlertsText = '';
+    let weeklyAlertRows = [];
+    function currentWeekRange() {
+        const start = startOfLocalWeek(localDateISO());
+        return { start, end: addDaysToLocalDate(start, 6) };
+    }
+    function renderWeeklyAlerts() {
+        if (!db) return;
+        const range = currentWeekRange();
+        const res = safeExec(`SELECT s.id, s.name, s.room,
+            SUM(CASE WHEN a.status IN ('نائم','متأخر') THEN 1 ELSE 0 END) AS total_count,
+            SUM(CASE WHEN a.status='نائم' THEN 1 ELSE 0 END) AS asleep_count,
+            SUM(CASE WHEN a.status='متأخر' THEN 1 ELSE 0 END) AS late_count
+            FROM students s JOIN attendance a ON a.s_id=s.id
+            WHERE a.date BETWEEN ? AND ? AND a.status IN ('نائم','متأخر')
+            GROUP BY s.id,s.name,s.room HAVING total_count >= 5
+            ORDER BY total_count DESC,s.name ASC`, [range.start, range.end]);
+        const rows = res.length ? res[0].values : [];
+        weeklyAlertRows = rows;
+        const list = document.getElementById('weeklyAlertsList');
+        if (!list) return;
+        const pending = JSON.parse(localStorage.getItem('pending_weekly_threshold_alerts_v1') || 'null');
+        const pendingHtml = pending ? `<div class="col-12"><div class="alert alert-warning d-flex justify-content-between align-items-center gap-2"><span>🔔 <strong>تنبيه محفوظ:</strong> ${String(pending.message).replace(/\n/g, ' | ')}</span><button class="btn btn-sm btn-outline-dark" onclick="dismissPendingWeeklyAlert()">تمت المراجعة</button></div></div>` : '';
+        weeklyAlertsText = `🔔 تنبيه متابعة الطلاب\nالفترة: ${range.start} إلى ${range.end}\n\n`;
+        if (!rows.length) {
+            list.innerHTML = pendingHtml + '<div class="col-12"><div class="alert alert-success mb-0">✅ لا يوجد طالب تجاوز حد التنبيه هذا الأسبوع.</div></div>';
+            weeklyAlertsText += 'لا توجد حالات تجاوز للحدود.';
+            return;
+        }
+        list.innerHTML = pendingHtml + rows.map(row => {
+            const total = Number(row[3]);
+            const level = total >= 15 ? 'أحمر' : total >= 10 ? 'أصفر' : 'أزرق';
+            const cls = total >= 15 ? '' : total >= 10 ? 'alert-yellow' : 'alert-blue';
+            weeklyAlertsText += `👤 ${row[1]} | غرفة ${row[2]} | ${level}\nنائم: ${row[4]} | متأخر: ${row[5]} | الإجمالي: ${total}\n\n`;
+            return `<div class="col-md-6 col-lg-4"><div class="weekly-alert-item ${cls} rounded-3 p-3 h-100"><div class="d-flex justify-content-between gap-2"><label class="d-flex align-items-start gap-2"><input class="form-check-input weekly-alert-check mt-1" type="checkbox" value="${row[0]}" onchange="updateWeeklyAlertsSelection()"><span><strong>${row[1]}</strong><br><span class="small">غرفة ${row[2]}</span></span></label><span class="badge bg-dark rounded-pill">${total}</span></div><div class="small mt-2">نائم ${row[4]} · متأخر ${row[5]}</div><div class="small fw-bold mt-2">حد ${level}</div></div></div>`;
+        }).join('');
+        updateWeeklyAlertsSelection();
+    }
+    function openWeeklyAlertsInFollowup() {
+        document.getElementById('tab-followup')?.click();
+        const period = document.getElementById('followupPeriod');
+        if (period) period.value = 'current_week';
+        renderFollowup();
+    }
+    function dismissPendingWeeklyAlert() {
+        localStorage.removeItem('pending_weekly_threshold_alerts_v1');
+        renderWeeklyAlerts();
+    }
+    function updateWeeklyAlertsSelection() {
+        const checks = Array.from(document.querySelectorAll('.weekly-alert-check'));
+        const selected = checks.filter(c => c.checked).length;
+        const label = document.getElementById('weeklyAlertsSelectedCount');
+        if (label) label.textContent = selected ? `(${selected} محدد)` : '(لم يتم تحديد طلاب)';
+        const all = document.getElementById('weeklyAlertsSelectAll');
+        if (all) all.checked = checks.length > 0 && selected === checks.length;
+    }
+    function toggleWeeklyAlertsSelectAll(checked) {
+        document.querySelectorAll('.weekly-alert-check').forEach(c => { c.checked = checked; });
+        updateWeeklyAlertsSelection();
+    }
+    function weeklyAlertReportText(row, range) {
+        const details = safeExec(`SELECT date, prayer, status, notes FROM attendance WHERE s_id=? AND date BETWEEN ? AND ? AND status IN ('نائم','متأخر') ORDER BY date ASC, prayer ASC`, [row[0], range.start, range.end]);
+        let text = `👤 الطالب: ${row[1]}\n🏠 الغرفة: ${row[2]}\n📅 الغيابات خلال الأسبوع (${range.start} إلى ${range.end})\n`;
+        if (details.length && details[0].values.length) details[0].values.forEach(v => { text += `- ${reportDateLabel(v[0])} | ${v[1] || ''} | ${v[2]}${v[3] ? ` | ${v[3]}` : ''}\n`; });
+        text += `الإجمالي: ${row[3]} | نائم: ${row[4]} | متأخر: ${row[5]}\n`;
+        return text;
+    }
+    function copyWeeklyAlerts() {
+        const selectedIds = new Set(Array.from(document.querySelectorAll('.weekly-alert-check:checked')).map(c => Number(c.value)));
+        if (!selectedIds.size) return alert('حدد طالباً واحداً أو أكثر أولاً.');
+        const range = currentWeekRange();
+        let text = `📋 تقرير متابعة الطلاب\n📅 الفترة: ${range.start} إلى ${range.end}\n\n`;
+        weeklyAlertRows.filter(row => selectedIds.has(Number(row[0]))).forEach(row => { text += weeklyAlertReportText(row, range) + '\n'; });
+        weeklyAlertsText = text;
+        const done = () => alert('تم نسخ تنبيه الأسبوع للمشرف.');
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(weeklyAlertsText).then(done).catch(() => fallbackCopy(weeklyAlertsText, done));
+        else fallbackCopy(weeklyAlertsText, done);
+    }
+
+    // --- استيراد تحضير من نص واتساب ---
+    let whatsappImportRows = [];
+    function normalizeArabic(value) {
+        return String(value || '').toLowerCase().replace(/[إأآا]/g, 'ا').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ة/g, 'ه').replace(/[ًٌٍَُِّْـ]/g, '').replace(/[\u200f\u200e]/g, '').replace(/\s+/g, ' ').trim();
+    }
+    function whatsappStatus(line) {
+        const text = normalizeArabic(line);
+        if (/(نائم|نايم|غائب|غايب)/.test(text)) return 'نائم';
+        if (/(متاخر|متأخر|تأخر|تاخر)/.test(text)) return 'متأخر';
+        if (/(بعذر|عذر|معتذر)/.test(text)) return 'بعذر';
+        if (/(حضر|حاضر|صلى|مصلي|تم الحضور|موجود)/.test(text)) return 'صلى';
+        return '';
+    }
+    function parseWhatsAppImport() {
+        const text = document.getElementById('whatsappImportText')?.value || '';
+        const students = safeExec('SELECT id,name,room FROM students ORDER BY name ASC');
+        const all = students.length ? students[0].values : [];
+        const rows = [];
+        text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).forEach(line => {
+            const status = whatsappStatus(line);
+            if (!status) return;
+            const before = line.split(/[:：|؛\-–—]/)[0].replace(/^\s*(?:\d+[.)-]|[-*•])\s*/, '').trim();
+            const candidate = normalizeArabic(before).replace(/^(?:اسم|الطالب|الاسم)\s*/, '').trim();
+            let found = all.find(s => normalizeArabic(s[1]) === candidate);
+            if (!found) found = all.find(s => candidate.length >= 3 && normalizeArabic(s[1]).includes(candidate));
+            rows.push({ id: found?.[0] || null, name: found?.[1] || before, room: found?.[2] || '-', status, source: line });
+        });
+        const unique = new Map();
+        rows.forEach(row => unique.set(row.id ? `id:${row.id}` : `raw:${normalizeArabic(row.name)}`, row));
+        return Array.from(unique.values());
+    }
+    function previewWhatsAppImport() {
+        whatsappImportRows = parseWhatsAppImport();
+        const box = document.getElementById('whatsappImportPreview');
+        const status = document.getElementById('whatsappImportStatus');
+        if (!whatsappImportRows.length) { box.innerHTML = '<div class="text-muted text-center p-4">لم يتم العثور على أسطر تحتوي حالة معروفة.</div>'; status.innerHTML = ''; return; }
+        box.innerHTML = `<table class="table table-sm text-center align-middle"><thead class="table-light"><tr><th>الاسم المستخرج</th><th>الغرفة</th><th>الحالة</th><th>المطابقة</th></tr></thead><tbody>${whatsappImportRows.map(r => `<tr class="${r.id ? '' : 'unmatched'}"><td class="fw-bold">${r.name}</td><td>${r.room}</td><td>${r.status}</td><td>${r.id ? '✅ طالب مسجل' : '⚠️ غير مطابق — لن يضاف'}</td></tr>`).join('')}</tbody></table>`;
+        const matched = whatsappImportRows.filter(r => r.id).length;
+        status.innerHTML = `<div class="alert alert-secondary small mb-0">تم التعرف على ${whatsappImportRows.length} سطراً، منها ${matched} مطابق لطلاب مسجلين. لن تُحفظ السجلات غير المطابقة.</div>`;
+    }
+    function commitWhatsAppImport() {
+        previewWhatsAppImport();
+        const date = document.getElementById('whatsappImportDate')?.value;
+        const prayer = document.getElementById('whatsappImportPrayer')?.value;
+        const rows = whatsappImportRows.filter(r => r.id);
+        if (!date || !prayer) return alert('اختر التاريخ والصلاة أولاً.');
+        if (!rows.length) return alert('لا توجد أسماء مطابقة للحفظ.');
+        rows.forEach(row => {
+            const existing = safeExec('SELECT id FROM attendance WHERE s_id=? AND date=? AND prayer=? ORDER BY id DESC LIMIT 1', [row.id, date, prayer]);
+            if (existing.length && existing[0].values.length) db.run('UPDATE attendance SET status=?, notes=? WHERE id=?', [row.status, 'استيراد من واتساب', existing[0].values[0][0]]);
+            else db.run('INSERT INTO attendance (s_id,status,notes,prayer,date) VALUES (?,?,?,?,?)', [row.id, row.status, 'استيراد من واتساب', prayer, date]);
+        });
+        saveDB(); renderWeeklyAlerts(); refreshHub();
+        document.getElementById('whatsappImportStatus').innerHTML = `<div class="alert alert-success">✅ تمت إضافة/تحديث ${rows.length} سجلاً دون تكرار. يمكنك مراجعة التقرير الآن.</div>`;
+    }
+    function useSelectedDateForWhatsApp() { const input = document.getElementById('whatsappImportDate'); if (input) input.value = getSelectedReportDate(); }
+    function clearWhatsAppImport() { document.getElementById('whatsappImportText').value = ''; whatsappImportRows = []; previewWhatsAppImport(); }
+    function resetWhatsAppImportStatus() { const input = document.getElementById('whatsappImportDate'); if (input && !input.value) input.value = getSelectedReportDate(); }
+
+    // --- التصدير PDF و Excel ---
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        
+        // ملاحظة: دعم اللغة العربية في jsPDF يتطلب تحميل خطوط، هنا سنستخدم جدول بسيط
+        doc.text("Attendance Report", 105, 10, { align: 'center' });
+        
+        const rows = [];
+        const res = db.exec("SELECT s.name, s.room, a.date, a.prayer, a.status FROM attendance a JOIN students s ON a.s_id = s.id LIMIT 50");
+        if (res.length) {
+            res[0].values.forEach(v => rows.push(v));
+            doc.autoTable({
+                head: [['Name', 'Room', 'Date', 'Prayer', 'Status']],
+                body: rows,
+                startY: 20,
+                styles: { font: 'helvetica' }
+            });
+            doc.save("Report.pdf");
+        }
+    }
+
+    function exportToExcel() {
+        const rows = [["الاسم", "الغرفة", "التاريخ", "الصلاة", "الحالة"]];
+        const res = db.exec("SELECT s.name, s.room, a.date, a.prayer, a.status FROM attendance a JOIN students s ON a.s_id = s.id");
+        if (res.length) {
+            res[0].values.forEach(v => rows.push(v));
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "التقارير");
+            XLSX.writeFile(wb, "تقرير_المتابعة.xlsx");
+        }
+    }
+
+    // --- وظائف إضافية ---
+    function sendWhatsApp(phone, name, date) {
+        if (!phone) return alert("يرجى إضافة الرقم أولاً");
+        const msg = `*تقرير متابعة*\n👤 الطالب: ${name}\n📅 التاريخ: ${reportDateLabel(date)}\n(يرجى مراجعة حالة الصلوات في التطبيق)`;
+        window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function copyToWhatsApp() {
+        const blocks = document.querySelectorAll('.student-block');
+        if (!blocks.length) return alert('أنشئ التقرير أولاً ثم اضغط نسخ التقرير.');
+
+        let text = `📋 *تقرير متابعة الصلوات*\n📅 تاريخ النسخ: ${new Date().toLocaleDateString('ar-SA')}\n🗓️ اليوم: ${new Date().toLocaleDateString('ar-SA', { weekday: 'long' })}\n\n`;
+        blocks.forEach(block => {
+            const name = block.querySelector('.fw-bold')?.innerText || '';
+            const date = block.querySelector('.student-header small')?.innerText || '';
+            text += `👤 *${name}*\n📅 ${date}\n`;
+            block.querySelectorAll('.prayer-item').forEach(item => {
+                text += `  - ${item.innerText.replace(/\n/g, ': ')}\n`;
+            });
+            text += "\n";
+        });
+
+        const copyPromise = navigator.clipboard && navigator.clipboard.writeText
+            ? navigator.clipboard.writeText(text)
+            : Promise.reject(new Error('Clipboard API unavailable'));
+        copyPromise.then(() => alert("تم نسخ التقرير مع التاريخ واسم اليوم!"))
+            .catch(() => {
+                const area = document.createElement('textarea');
+                area.value = text;
+                area.style.position = 'fixed';
+                area.style.opacity = '0';
+                document.body.appendChild(area);
+                area.select();
+                document.execCommand('copy');
+                area.remove();
+                alert("تم نسخ التقرير مع التاريخ واسم اليوم!");
+            });
+    }
+
+    function exportBackup() {
+        const blob = new Blob([localStorage.getItem(DB_KEY)], { type: "application/json" });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+
+    function importBackup(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            localStorage.setItem(DB_KEY, e.target.result);
+            location.reload();
+        };
+        reader.readAsText(input.files[0]);
+    }
+
+    function exportStudents(format) {
+        const res = db.exec("SELECT name, room FROM students ORDER BY CAST(room AS INTEGER) ASC");
+        if (!res.length) return;
+        const rows = res[0].values;
+        if (format === 'excel') {
+            const ws = XLSX.utils.aoa_to_sheet([["الاسم", "الغرفة"], ...rows]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "قائمة");
+            XLSX.writeFile(wb, "طلاب.xlsx");
+        } else {
+            let html = `<html><body dir="rtl"><h2>قائمة الطلاب</h2><table border="1">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</table></body></html>`;
+            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "طلاب.doc";
+            a.click();
+        }
+    }
+
+    function sendQRDirect(id, name, phone) {
+        if (!phone) return alert("أضف الرقم أولاً");
+        const msg = `كود التحضير الخاص بك يا ${name} هو: (STUDENT_ID:${id})`;
+        window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function sendQRWhatsApp() {
+        sendQRDirect(currentQRData.id, currentQRData.name, currentQRData.phone);
+    }
+
+    function loadStudentList() {
+        // تحديث قائمة البحث
+    }
+
+    init();
+    document.addEventListener('DOMContentLoaded', () => {
+        chooseReportDate(localDateISO(), false);
+        updateReportReference();
+        document.getElementById('tab-reports')?.addEventListener('shown.bs.tab', () => updateReportReference());
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
